@@ -1,0 +1,7 @@
+1. 터미널 열기
+2. cd 입력후 폴더 드래그
+
+
+
+conda activate ibm && python CatAI.py cat.jpg
+conda activate ibm && python CatAI.py plane.jpg
