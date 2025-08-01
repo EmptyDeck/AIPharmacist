@@ -5,16 +5,19 @@ from typing import List
 from core.config import settings
 import os
 
+
+
+
 # APIRouter instance creation
 router = APIRouter()
 
-# Email configuration (Gmail SMTP example)
+# Email configuration (Naver SMTP)
 conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("MAIL_USERNAME", "test@example.com"),
+    MAIL_USERNAME=os.getenv("MAIL_USERNAME", "test@naver.com"),
     MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", "test_password"),
-    MAIL_FROM=os.getenv("MAIL_FROM", "test@example.com"),
+    MAIL_FROM=os.getenv("MAIL_FROM", "test@naver.com"),
     MAIL_PORT=587,
-    MAIL_SERVER="smtp.gmail.com",
+    MAIL_SERVER="smtp.naver.com",  # 네이버 SMTP 서버
     MAIL_STARTTLS=True,
     MAIL_SSL_TLS=False,
     USE_CREDENTIALS=True,
