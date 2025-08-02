@@ -5,18 +5,18 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
     # .env 파일에 정의한 변수들을 타입과 함께 선언
-    # 팀원 모델 API 설정
-    MODEL_API_URL: str = ""  # 팀원 모델 서버 주소
+    # IBM Watson 설정
+    WATSONX_API_URL: str = "https://us-south.ml.cloud.ibm.com"  # IBM Cloud URL
+    WATSONX_API_KEY: str = ""  # IBM Cloud API Key
+    WATSONX_PROJECT_ID: str = ""  # Watson Studio Project ID
+    
+    # 팀원 모델 API 설정 (중계 서버용 - 백업)
+    MODEL_API_URL: str = "http://localhost:5000"  # 팀원 모델 서버 주소
     MODEL_API_KEY: str = ""  # 팀원 모델 API 키 (필요시)
     
     # Naver OAuth 설정
     NAVER_CLIENT_ID: str
     NAVER_CLIENT_SECRET: str
-    
-    # 기존 WatsonX 설정 (백업용)
-    WATSONX_API_URL: str = ""
-    WATSONX_API_KEY: str = ""
-    WATSONX_PROJECT_ID: str = ""
 
 # 설정 객체 생성
 settings = Settings()
