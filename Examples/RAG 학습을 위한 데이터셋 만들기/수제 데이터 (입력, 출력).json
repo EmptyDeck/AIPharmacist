@@ -1,0 +1,72 @@
+[
+  {
+    "question": "게보린정은 어떤 증상에 사용할 수 있나요?",
+    "correct_answer": “게보린정은 두통, 치통, 발치 후 통증, 인후통, 귀 통증, 관절통, 신경통, 요통, 근육통, 어깨통증(견통), 타박상, 골절 통증, 염좌, 월경통, 외상으로 인한 통증 등에 사용하실 수 있고, 오한이나 발열이 있을 때 해열 목적으로도 사용하실 수 있습니다.”,
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "게보린정은 하루에 몇 번 복용해야 하나요?",
+    "correct_answer": “성인 기준으로는 1회 1정씩, 하루 최대 3회까지 복용 가능하신데요, 공복 상태에서는 위에 부담을 줄 수 있으니 식후에 드시는 게 좋습니다.
+복용 간격은 최소 4시간 이상 띄워 주시고, 이 약은 장기간 복용하지 않고 증상이 있을 때만 단기간 복용하시는 게 원칙이니 주의해주세요.”,
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "게보린정과 함께 복용하면 안 되는 약이나 음식이 있나요?",
+    "correct_answer": “이 약은 바르비탈계 약물, 삼환계 항우울제, 다른 종류의 소염진통제나 해열진통제, 그리고 아세트아미노펜이 포함된 다른 약과는 함께 복용하지 않는 것이 안전합니다.
+그리고 음주 중이시거나 술을 자주 드시는 경우에는 간 손상의 위험이 커질 수 있으니 알코올과의 병용은 피하셔야 합니다.
+현재 와파린, 리튬, 티아지드계 이뇨제 같은 약을 복용 중이시라면, 이 약과의 상호작용 가능성이 있으니 지금 말씀해 주세요. 복용 중인 약을 함께 확인한 뒤에 사용 여부를 안내드리겠습니다.”,
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "겔포스엠현탁액은 어떤 위장 증상에 효과가 있나요?",
+    "correct_answer": "겔포스엠현탁액은 위산과다(위염, 위·십이지장궤양에 관련된 것도 포함 해서 사용하고, 속쓰림, 위부불쾌감, 위부팽만감, 체함, 구역, 구토, 위통, 신트림에도 종종 사용됩니다.",
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "겔포스엠현탁액은 언제 복용하는 것이 좋나요?",
+    "correct_answer": “이 약은 성인 기준으로 1회 1포씩, 하루 3회까지 복용하시면 되고요, 식사와 식사 사이, 혹은 취침 전에 복용하시는 게 가장 효과적입니다.
+복용 간격은 4시간 이상으로 유지해 주시고, 필요 시 연령이나 증상 정도에 따라 용량을 조절할 수 있으니 증상에 변화가 있다면 알려주세요.”,
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "닥터베아제정은 소화불량에 도움이 되나요?",
+    "correct_answer": “닥터베아제정은 소화불량, 식욕 저하, 과식, 체기, 위가 더부룩할 때 도움을 주는 약입니다. 소화를 촉진해주는 역할을 하니까 그런 증상들이 있을 때 복용하시면 좋습니다.”,
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "닥터베아제정은 어떻게 복용해야 하나요?",
+    "correct_answer": “성인 기준으로는 1회 1정을, 하루 3번 식후에 복용하시면 됩니다.
+복용 중에도 증상이 충분히 호전되지 않거나 불편함이 지속된다면, 증상에 따라 용량을 조절할 수 있으니 그때 말씀해 주세요. 상태를 보고 적절히 안내드리겠습니다.”,
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "리프레쉬플러스점안액은 어떤 눈 증상에 사용하나요?",
+    "correct_answer":“이 점안액은 안구건조증이나 바람이나 햇볕에 눈이 노출돼서 생기는 따가움, 자극감을 완화하는 데 사용하실 수 있어요.
+눈의 불쾌감이나 일시적인 자극을 완화하는 방향으로도 사용합니다",
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "리프레쉬플러스점안액 사용 시 주의할 점이 있나요?",
+    "correct_answer": “이 약은 외용으로만 사용하셔야 하고, 한 번 사용한 후에는 남은 액이나 용기는 바로 폐기해 주세요.
+점안하실 때는 용기의 끝이 눈이나 피부에 닿지 않도록 주의해 주시고, 액이 변색됐거나 혼탁해 보이면 사용하지 않는 게 안전합니다.”,
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "마그밀정은 어떤 효과가 있나요?",
+    "correct_answer": "“마그밀정은 위산과다, 속쓰림, 위의 불편함이 있을 때 제산 작용을 해주고요,
+변비가 있을 때는 장운동을 도와서 배변을 원활하게 해주는 완하 작용도 있어서 두 증상 모두에 사용할 수 있는 약입니다.”,
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "마그밀정을 복용하면 안 되는 사람이 있나요?",
+    "correct_answer": “신장 기능이 좋지 않거나 평소 설사를 자주 하시는 분들은 이 약을 피하시는 게 좋습니다.
+또한, 심장 기능에 문제가 있거나 고마그네슘혈증이 있으시면 말씀해주세요. 복용 전 제가 용량이나 복용 여부를 따로 확인해드릴게요.”,
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  },
+  {
+    "question": "맥시부펜시럽은 몇 살부터 복용할 수 있나요?",
+    "correct_answer": “맥시부펜시럽은 생후 6개월 이상부터 복용 가능하고요, 체중 1kg당 약 0.40.6mL 정도를 46시간 간격으로 필요 시 복용하시면 됩니다.
+하루 최대 4회까지 복용 가능하긴 하지만, 아이의 증상이나 체중에 따라 정확한 용량을 계산해서 드시는 게 안전하니, 필요하시면 제가 용량이 적힌 통을 따로 드리겠습니다.”
+    "correct_answer_document_ids": ["OpenData_EasyExcelListC20250802_mod.csv"]
+  }
+]
