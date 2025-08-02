@@ -2,13 +2,13 @@ import { jsonAxios } from "../axios";
 
 // 채팅 생성
 export const postChat = async (userMessage) => {
-  const response = await jsonAxios.get(`/api/chat`, {
-    request: userMessage.text, 
+  const response = await jsonAxios.post(`/api/chat`, {
+    question: userMessage.content,
+    underlying_diseases: userMessage.conditions || [],
     currentMedications: userMessage.medications || [],
-    underlying_diseases: userMessage.diseases || [],
   });
   console.log("BASE URL:", jsonAxios.defaults.baseURL);
-  return response;
+  return response.data;
 };
 
 // 채팅 서비스 상태 조회
