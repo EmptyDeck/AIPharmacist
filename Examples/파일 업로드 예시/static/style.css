@@ -1,0 +1,30 @@
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #f9f9f9;
+}
+.container {
+    margin: 40px auto;
+    padding: 24px 36px;
+    background: #fff;
+    border-radius: 12px;
+    max-width: 470px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.1);
+}
+h2 {
+    color: #1558b0;
+}
+form {
+    margin-bottom: 18px;
+}
+#result {
+    margin-top: 20px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+td, th {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: center;
+}
