@@ -3,66 +3,113 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from schemas.chat import ChatRequest
 from core.config import settings
+from ibm_watson_machine_learning.foundation_models import Model
+from ibm_watson_machine_learning.metanames import GenTextParamsMetaNames as GenParams
+import asyncio
+from typing import Optional
 
 # APIRouter 인스턴스 생성
 router = APIRouter()
 
+# IBM Watson 모델 인스턴스 (전역으로 한 번만 초기화)
+_watson_model: Optional[Model] = None
+
+def get_watson_model() -> Model:
+    """IBM Watson 모델 인스턴스를 반환합니다 (Singleton 패턴)"""
+    global _watson_model
+    if _watson_model is None:
+        # IBM Watson 자격 증명 설정
+        creds = {
+            "url": settings.WATSONX_API_URL.split('/ml/v1')[0],  # Base URL만 추출
+            "apikey": settings.WATSONX_API_KEY
+        }
+        
+        # 모델 인스턴스 생성
+        _watson_model = Model(
+            model_id='ibm/granite-3-3-8b-instruct',
+            credentials=creds,
+            project_id=settings.WATSONX_PROJECT_ID
+        )
+    return _watson_model
+
+def get_medical_completion(prompt: str) -> str:
+    """IBM Watson 모델에게 의료 상담 요청을 보내고 응답을 반환합니다"""
+    try:
+        model = get_watson_model()
+        response = model.generate(
+            prompt=prompt,
+            params={
+                GenParams.MAX_NEW_TOKENS: 300,  # 의료 상담용으로 조금 더 길게
+                GenParams.TEMPERATURE: 0.3,     # 의료 정보는 보수적으로
+                GenParams.REPETITION_PENALTY: 1.1
+            }
+        )
+        return response['results'][0]['generated_text']
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"IBM Watson 모델 오류: {str(e)}")
 
 @router.post("/chat", summary="의료 AI 채팅")
 async def get_chat_response(request: ChatRequest):
-    """프론트엔드 요청을 팀원 AI 모델로 전송하고 응답을 반환합니다.(중계)"""
+    """프론트엔드 요청을 IBM Watson 모델로 직접 전송하고 응답을 반환합니다."""
     
-    # 팀원 모델로 전송할 데이터 구성
-    model_request = {
-        "question": request.question,
-        "underlying_diseases": request.underlying_diseases or [],   # 기저질환
-        "medications": request.currentMedications or []             # 복용중인 약물
-    }
+    # 사용자 컨텍스트 구성
+    user_context = []
+    if request.underlying_diseases:
+        user_context.append(f"기저질환: {', '.join(request.underlying_diseases)}")
+    if request.currentMedications:
+        user_context.append(f"현재 복용 약물: {', '.join(request.currentMedications)}")
     
-    headers = {
-        "Content-Type": "application/json"
-    }
+    context_text = " | ".join(user_context) if user_context else "특별한 기저질환이나 복용 약물 없음"
     
-    # API 키가 설정되어 있다면 헤더에 추가
-    if settings.MODEL_API_KEY:
-        headers["Authorization"] = f"Bearer {settings.MODEL_API_KEY}"
+    # 의료 전용 프롬프트 구성
+    medical_prompt = f"""
+당신은 전문적인 의료 AI 어시스턴트입니다. 다음 지침을 따라 응답해주세요:
+
+지침:
+1. 정확하고 신뢰할 수 있는 의료 정보만 제공하세요
+2. 응급상황이 의심되면 즉시 병원 방문을 권하세요
+3. 진단이나 처방은 하지 말고, 일반적인 건강 조언만 제공하세요
+4. 불확실한 정보는 "전문의와 상담하세요"라고 안내하세요
+5. 따뜻하고 공감적인 톤으로 응답하세요
+
+환자 정보:
+- 사용자 상태: {context_text}
+- 질문: "{request.question}"
+
+위 정보를 바탕으로 적절한 의료 조언을 제공해주세요:
+"""
     
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            # 팀원 모델 API에 요청 전송
-            response = await client.post(
-                f"{settings.MODEL_API_URL}/predict",  # 팀원 모델의 예측 엔드포인트
-                json=model_request,
-                headers=headers
-            )
-            response.raise_for_status()
-            
-            # 팀원 모델의 응답을 프론트엔드에 전달
-            model_response = response.json()
-            
-            return {
-                "answer": model_response.get("answer", model_response.get("response", "")),
-                "user_context": {
-                    "underlying_diseases": request.underlying_diseases,
-                    "medications": request.currentMedications
-                },
-                "model_metadata": model_response.get("metadata", {}),
-                "status": "success"
-            }
-                
-    except httpx.TimeoutException:
-        # 타임아웃 시 기본 응답 제공
-        return await _get_fallback_response(request, "AI 모델 서버 응답 시간 초과")
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            return await _get_fallback_response(request, "AI 모델 서버를 찾을 수 없음")
-        else:
-            return await _get_fallback_response(request, f"AI 모델 서버 오류: {e.response.status_code}")
-    except httpx.ConnectError:
-        # 연결 실패 시 기본 응답 제공
-        return await _get_fallback_response(request, "AI 모델 서버에 연결할 수 없음")
+        # IBM Watson 모델 호출 (비동기 처리)
+        loop = asyncio.get_event_loop()
+        watson_response = await loop.run_in_executor(
+            None, 
+            get_medical_completion, 
+            medical_prompt
+        )
+        
+        # 성공 응답 반환
+        return {
+            "answer": watson_response.strip(),
+            "user_context": {
+                "underlying_diseases": request.underlying_diseases,
+                "medications": request.currentMedications
+            },
+            "model_metadata": {
+                "model_name": "IBM Granite 3.3 8B Instruct",
+                "model_provider": "IBM Watson",
+                "context_provided": bool(user_context),
+                "disclaimer": "이는 일반적인 건강 정보이며, 전문 의료진의 진료를 대체할 수 없습니다."
+            },
+            "status": "success"
+        }
+        
+    except HTTPException:
+        # Watson 모델 오류 시 기존 fallback 로직 사용
+        raise
     except Exception as e:
-        return await _get_fallback_response(request, f"내부 서버 오류: {str(e)}")
+        # 기타 예외 시 fallback 응답
+        return await _get_fallback_response(request, f"서비스 일시 중단: {str(e)}")
 
 
 async def _get_fallback_response(request: ChatRequest, error_msg: str):
@@ -103,45 +150,46 @@ async def _get_fallback_response(request: ChatRequest, error_msg: str):
 
 @router.get("/health", summary="채팅 서비스 상태 확인")
 async def health_check():
-    """채팅 서비스와 팀원 모델의 연결 상태를 확인합니다."""
+    """IBM Watson 모델 연결 상태를 확인합니다."""
     
-    # 설정 상태 확인
+    # IBM Watson 설정 상태 확인
     config_status = {
-        "MODEL_API_URL": bool(settings.MODEL_API_URL),
-        "MODEL_API_KEY": bool(settings.MODEL_API_KEY) if settings.MODEL_API_KEY else "not_required"
+        "WATSONX_API_URL": bool(settings.WATSONX_API_URL),
+        "WATSONX_API_KEY": bool(settings.WATSONX_API_KEY),
+        "WATSONX_PROJECT_ID": bool(settings.WATSONX_PROJECT_ID)
     }
     
-    # 팀원 모델 서비스 연결 테스트
-    model_service_status = "unknown"
-    model_error = None
+    # IBM Watson 모델 연결 테스트
+    watson_status = "unknown"
+    watson_error = None
     
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            # 팀원 모델의 health 엔드포인트 확인
-            test_response = await client.get(f"{settings.MODEL_API_URL}/health")
-            if test_response.status_code == 200:
-                model_service_status = "healthy"
-            else:
-                model_service_status = "unhealthy"
-                model_error = f"HTTP {test_response.status_code}"
-    except httpx.ConnectError:
-        model_service_status = "unavailable"
-        model_error = "Connection refused"
-    except httpx.TimeoutException:
-        model_service_status = "timeout"
-        model_error = "Connection timeout"
+        # Watson 모델 인스턴스 생성 테스트
+        test_model = get_watson_model()
+        if test_model:
+            watson_status = "healthy"
+        else:
+            watson_status = "unavailable"
+            watson_error = "Model instance creation failed"
     except Exception as e:
-        model_service_status = "error"
-        model_error = str(e)
+        watson_status = "error"
+        watson_error = str(e)
     
-    overall_status = "healthy" if model_service_status == "healthy" else "degraded"
+    all_configured = all([
+        settings.WATSONX_API_URL,
+        settings.WATSONX_API_KEY, 
+        settings.WATSONX_PROJECT_ID
+    ])
+    
+    overall_status = "healthy" if watson_status == "healthy" and all_configured else "degraded"
     
     return {
-        "service": "Chat API",
+        "service": "Dr.Watson Chat API", 
         "status": overall_status,
         "config_status": config_status,
-        "model_service_status": model_service_status,
-        "model_api_url": settings.MODEL_API_URL,
-        "model_error": model_error,
-        "message": "AI 모델 서버가 정상 작동 중입니다." if overall_status == "healthy" else "AI 모델 서버 연결에 문제가 있습니다. 기본 응답으로 동작합니다."
+        "watson_model_status": watson_status,
+        "watson_error": watson_error,
+        "all_configured": all_configured,
+        "model_id": "ibm/granite-3-3-8b-instruct",
+        "message": "IBM Watson 모델이 정상 작동 중입니다." if overall_status == "healthy" else "IBM Watson 설정을 확인하세요."
     }
