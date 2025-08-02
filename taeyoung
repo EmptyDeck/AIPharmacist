@@ -159,7 +159,7 @@ def main():
     print("=" * 50)
     
     # API 키 입력 및 확인
-    API_KEY = "fnuO5k8mU3q_NeAw7e2EzYg4URqqup2pdbnENGjItcj8"  # 실제 API 키로 교체하세요
+    API_KEY =  # 실제 API 키로 교체하세요
     
     if API_KEY == "<your API key>":
         print("\n🔑 IBM Cloud API 키를 입력해주세요.")
