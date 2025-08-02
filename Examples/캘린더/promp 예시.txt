@@ -1,0 +1,87 @@
+prompt : 타이레놀 500mg 하루 3회 복용하세요. 아침, 점심, 저녁 식후에 드시면 됩니다. 감기 증상이 완전히 나을 때까지 7일간 복용해주세요.
+
+output :
+
+{
+  "medications": [
+    {
+      "name": "타이레놀",
+      "frequency": 3,
+      "times": ["08:30", "12:30", "18:30"],
+      "original_text": "타이레놀 500mg 하루 3회 복용하세요. 아침, 점심, 저녁 식후에 드시면 됩니다."
+    }
+  ],
+  "calendar_events": [
+    {
+      "summary": "💊 타이레놀 복용",
+      "description": "약물: 타이레놀\n복용 시간: 08:30\n⚠️ 정확한 시간에 복용하세요!",
+      "start": {
+        "dateTime": "2025-08-03T08:30:00+09:00",
+        "timeZone": "Asia/Seoul"
+      },
+      "end": {
+        "dateTime": "2025-08-03T09:00:00+09:00",
+        "timeZone": "Asia/Seoul"
+      },
+      "recurrence": [
+        "RRULE:FREQ=DAILY;UNTIL=20250810T235959Z"
+      ],
+      "reminders": {
+        "useDefault": false,
+        "overrides": [
+          {"method": "popup", "minutes": 10},
+          {"method": "popup", "minutes": 0}
+        ]
+      }
+    },
+    {
+      "summary": "💊 타이레놀 복용",
+      "description": "약물: 타이레놀\n복용 시간: 12:30\n⚠️ 정확한 시간에 복용하세요!",
+      "start": {
+        "dateTime": "2025-08-03T12:30:00+09:00",
+        "timeZone": "Asia/Seoul"
+      },
+      "end": {
+        "dateTime": "2025-08-03T13:00:00+09:00",
+        "timeZone": "Asia/Seoul"
+      },
+      "recurrence": [
+        "RRULE:FREQ=DAILY;UNTIL=20250810T235959Z"
+      ],
+      "reminders": {
+        "useDefault": false,
+        "overrides": [
+          {"method": "popup", "minutes": 10},
+          {"method": "popup", "minutes": 0}
+        ]
+      }
+    },
+    {
+      "summary": "💊 타이레놀 복용",
+      "description": "약물: 타이레놀\n복용 시간: 18:30\n⚠️ 정확한 시간에 복용하세요!",
+      "start": {
+        "dateTime": "2025-08-03T18:30:00+09:00",
+        "timeZone": "Asia/Seoul"
+      },
+      "end": {
+        "dateTime": "2025-08-03T19:00:00+09:00",
+        "timeZone": "Asia/Seoul"
+      },
+      "recurrence": [
+        "RRULE:FREQ=DAILY;UNTIL=20250810T235959Z"
+      ],
+      "reminders": {
+        "useDefault": false,
+        "overrides": [
+          {"method": "popup", "minutes": 10},
+          {"method": "popup", "minutes": 0}
+        ]
+      }
+    }
+  ],
+  "schedule_info": {
+    "start_date": "2025-08-03",
+    "duration_days": 7,
+    "total_events": 3
+  }
+}
