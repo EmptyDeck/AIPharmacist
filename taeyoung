@@ -1,1 +1,240 @@
+# 주피터 노트북에서 실행하면 되는데 vscode 주피터 셀에서 실행하면 ctrl+shift+p 했을 때 처럼 맨 위 중앙 검색 창에 사용자가 질문을 하면 됨
+# api 키는 내껄로 설정해놨고 종료하고 싶을 땐 \quit 아니면 /quit를 사용자 질문창에 입력하면 종료됨
+import requests
+import json
+import sys
 
+# Watson X AI 챗봇 클래스
+class WatsonChatbot:
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.token = None
+        self.conversation_history = []
+        self.endpoint = 'https://us-south.ml.cloud.ibm.com/ml/v4/deployments/6261f83b-14d4-4666-9243-2cb36bdcd698/ai_service_stream?version=2021-05-01'
+        self.authenticate()
+    
+    def authenticate(self):
+        """IBM Cloud API 인증"""
+        print(f"🔍 API 키 길이: {len(self.api_key)} 문자")
+        print(f"🔍 API 키 시작: {self.api_key[:10]}...")
+        
+        try:
+            # API 키 검증
+            if not self.api_key or self.api_key == "<your API key>":
+                print("❌ 올바른 API 키를 입력해주세요!")
+                sys.exit(1)
+            
+            # API 키 정리 (공백 제거)
+            clean_api_key = self.api_key.strip()
+            
+            token_response = requests.post(
+                'https://iam.cloud.ibm.com/identity/token', 
+                data={
+                    "apikey": clean_api_key, 
+                    "grant_type": 'urn:ibm:params:oauth:grant-type:apikey'
+                },
+                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            )
+            
+            print(f"🔍 인증 응답 상태 코드: {token_response.status_code}")
+            
+            if token_response.status_code == 400:
+                print("❌ API 키가 올바르지 않습니다. 다음을 확인해주세요:")
+                print("   1. IBM Cloud 콘솔에서 API 키를 다시 확인")
+                print("   2. API 키에 공백이나 특수문자가 포함되어 있지 않은지 확인")
+                print("   3. API 키가 만료되지 않았는지 확인")
+                print(f"   응답 내용: {token_response.text}")
+                sys.exit(1)
+            
+            token_response.raise_for_status()
+            response_data = token_response.json()
+            
+            if "access_token" not in response_data:
+                print(f"❌ 토큰을 찾을 수 없습니다: {response_data}")
+                sys.exit(1)
+                
+            self.token = response_data["access_token"]
+            print("✅ Watson X AI 인증 성공!")
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ 인증 실패: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                print(f"   응답 내용: {e.response.text}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"❌ 예상치 못한 오류: {e}")
+            sys.exit(1)
+    
+    def send_message(self, user_message):
+        """사용자 메시지를 Watson X AI로 전송"""
+        # 대화 히스토리에 사용자 메시지 추가
+        self.conversation_history.append({
+            "role": "user", 
+            "content": user_message
+        })
+        
+        # API 요청 페이로드 준비
+        payload_scoring = {
+            "messages": self.conversation_history.copy()
+        }
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + self.token
+        }
+        
+        try:
+            # Watson X AI API 호출
+            response = requests.post(
+                self.endpoint, 
+                json=payload_scoring, 
+                headers=headers,
+                stream=True  # 스트리밍 응답 처리
+            )
+            response.raise_for_status()
+            
+            # 스트리밍 응답 처리
+            ai_response = ""
+            print("🤖 Watson AI: ", end="", flush=True)
+            
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        # JSON 라인 파싱
+                        line_text = line.decode('utf-8')
+                        if line_text.startswith('data: '):
+                            json_text = line_text[6:]  # 'data: ' 제거
+                            if json_text.strip() == '[DONE]':
+                                break
+                            
+                            data = json.loads(json_text)
+                            if 'choices' in data and len(data['choices']) > 0:
+                                delta = data['choices'][0].get('delta', {})
+                                if 'content' in delta:
+                                    content = delta['content']
+                                    ai_response += content
+                                    print(content, end="", flush=True)
+                    except (json.JSONDecodeError, KeyError):
+                        continue
+            
+            print()  # 줄바꿈
+            
+            # 대화 히스토리에 AI 응답 추가
+            if ai_response:
+                self.conversation_history.append({
+                    "role": "assistant", 
+                    "content": ai_response
+                })
+            
+            return ai_response
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ API 호출 실패: {e}")
+            return None
+    
+    def clear_conversation(self):
+        """대화 히스토리 초기화"""
+        self.conversation_history = []
+        print("🔄 대화 히스토리가 초기화되었습니다.")
+    
+    def show_conversation_history(self):
+        """대화 히스토리 출력"""
+        if not self.conversation_history:
+            print("📝 대화 히스토리가 없습니다.")
+            return
+        
+        print("📝 대화 히스토리:")
+        print("-" * 50)
+        for i, message in enumerate(self.conversation_history, 1):
+            role = "👤 사용자" if message['role'] == 'user' else "🤖 Watson AI"
+            print(f"{i}. {role}: {message['content'][:100]}{'...' if len(message['content']) > 100 else ''}")
+        print("-" * 50)
+
+def main():
+    print("🚀 Watson X AI 챗봇을 시작합니다!")
+    print("💡 명령어:")
+    print("  - '/clear': 대화 히스토리 초기화")
+    print("  - '/history': 대화 히스토리 보기")
+    print("  - '/quit' 또는 '/exit': 챗봇 종료")
+    print("=" * 50)
+    
+    # API 키 입력 및 확인
+    API_KEY = "fnuO5k8mU3q_NeAw7e2EzYg4URqqup2pdbnENGjItcj8"  # 실제 API 키로 교체하세요
+    
+    if API_KEY == "<your API key>":
+        print("\n🔑 IBM Cloud API 키를 입력해주세요.")
+        print("💡 API 키 찾는 방법:")
+        print("   1. IBM Cloud 콘솔 (https://cloud.ibm.com) 로그인")
+        print("   2. 관리 > 액세스(IAM) > API 키")
+        print("   3. 새 API 키 생성 또는 기존 키 복사")
+        print("   4. Watson Machine Learning 서비스 액세스 권한 확인")
+        print()
+        
+        while True:
+            API_KEY = input("API 키를 입력하세요: ").strip()
+            if API_KEY and len(API_KEY) > 20:  # IBM API 키는 보통 40자 이상
+                break
+            else:
+                print("❌ 올바른 API 키를 입력해주세요. (너무 짧습니다)")
+    
+    # API 키 간단 검증
+    if not API_KEY or len(API_KEY) < 20:
+        print("❌ 올바른 IBM Cloud API 키를 입력해주세요!")
+        return
+    
+    print(f"\n🔍 API 키 확인: {API_KEY[:8]}...{API_KEY[-4:]}")
+    
+    try:
+        # 챗봇 초기화
+        chatbot = WatsonChatbot(API_KEY)
+        
+        # 메인 대화 루프
+        while True:
+            try:
+                user_input = input("\n👤 사용자: ").strip()
+                
+                if not user_input:
+                    continue
+                
+                # 특수 명령어 처리
+                if user_input.lower() in ['/quit', '/exit']:
+                    print("👋 챗봇을 종료합니다. 안녕히 가세요!")
+                    break
+                elif user_input.lower() == '/clear':
+                    chatbot.clear_conversation()
+                    continue
+                elif user_input.lower() == '/history':
+                    chatbot.show_conversation_history()
+                    continue
+                elif user_input.lower() == '/test':
+                    # API 연결 테스트
+                    print("🔧 API 연결을 테스트합니다...")
+                    test_response = chatbot.send_message("안녕하세요!")
+                    if test_response:
+                        print("✅ API 연결 테스트 성공!")
+                    else:
+                        print("❌ API 연결 테스트 실패!")
+                    continue
+                
+                # Watson AI에게 메시지 전송
+                response = chatbot.send_message(user_input)
+                
+                if response is None:
+                    print("⚠️ 응답을 받지 못했습니다. 다시 시도해주세요.")
+            
+            except KeyboardInterrupt:
+                print("\n\n👋 사용자가 챗봇을 종료했습니다. 안녕히 가세요!")
+                break
+            except Exception as e:
+                print(f"❌ 예상치 못한 오류가 발생했습니다: {e}")
+                
+    except Exception as e:
+        print(f"❌ 챗봇 초기화 실패: {e}")
+        print("\n🔧 문제 해결 방법:")
+        print("   1. API 키가 올바른지 확인")
+        print("   2. IBM Cloud 계정에 Watson Machine Learning 서비스가 활성화되어 있는지 확인")
+        print("   3. API 키에 적절한 권한이 있는지 확인")
+        print("   4. 네트워크 연결 상태 확인")
+
+if __name__ == "__main__":
+    main()
