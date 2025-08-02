@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💊 약물 복용 일정 자동 생성 에이전트</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .input-section, .result-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .medication-input {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            resize: vertical;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        
+        .medication-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .duration-input {
+            width: 100px;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .duration-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result-area {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        
+        .medication-list {
+            margin-top: 20px;
+        }
+        
+        .medication-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .medication-item h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .examples {
+            background: #e7f3ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .examples h4 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .example-text {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        
+        .example-text:hover {
+            background-color: #d0e7ff;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        
+        .loading .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💊 약물 복용 일정 자동 생성 에이전트</h1>
+            <p>약물 정보를 입력하시면 자동으로 구글 캘린더에 복용 일정을 추가해드립니다</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- 입력 섹션 -->
+            <div class="input-section">
+                <div class="section-title">
+                    📝 약물 정보 입력
+                </div>
+                
+                <div class="examples">
+                    <h4>💡 입력 예시 (클릭하면 자동 입력)</h4>
+                    <div class="example-text" onclick="setExample('타이레놀 500mg 하루 3회 복용, 아침 점심 저녁 식후')">
+                        • 타이레놀 500mg 하루 3회 복용, 아침 점심 저녁 식후
+                    </div>
+                    <div class="example-text" onclick="setExample('오메프라졸 20mg 아침 공복에 복용\n암브록솔 30mg 하루 2회 아침 저녁 복용')">
+                        • 오메프라졸 20mg 아침 공복에 복용<br>• 암브록솔 30mg 하루 2회 아침 저녁 복용
+                    </div>
+                    <div class="example-text" onclick="setExample('환자명: 홍길동\n처방:\n1. 타이레놀 500mg - 하루 3회, 식후 복용\n2. 가스터 20mg - 하루 1회, 아침 식전 복용\n복용기간: 7일')">
+                        • 처방전 형태의 텍스트
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="medicationText">약물 정보 (소견서, 처방전, 약국 설명서 등)</label>
+                    <textarea 
+                        id="medicationText" 
+                        class="medication-input"
+                        placeholder="약물 정보를 입력하세요...&#10;&#10;예시:&#10;타이레놀 500mg 하루 3회 아침 점심 저녁 복용&#10;오메프라졸 20mg 아침 식전 복용&#10;&#10;여러 약물을 한 번에 입력 가능합니다."
+                    ></textarea>
+                </div>
+                
+                <div class="input-group">
+                    <label for="durationDays">복용 기간 (일수)</label>
+                    <input type="number" id="durationDays" class="duration-input" value="30" min="1" max="365">
+                    <small style="color: #666; margin-left: 10px;">기본값: 30일</small>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="processMedication()" id="processBtn">
+                        🚀 일정 생성하기
+                    </button>
+                    <button class="btn btn-secondary" onclick="getEvents()">
+                        📋 일정 조회
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteAllEvents()">
+                        🗑️ 모든 약물 일정 삭제
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 결과 섹션 -->
+            <div class="result-section">
+                <div class="section-title">
+                    📊 처리 결과
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>약물 정보를 분석하고 일정을 생성하고 있습니다...</p>
+                </div>
+                
+                <div class="result-area" id="resultArea">
+                    💊 약물 복용 일정 자동 생성 에이전트에 오신 것을 환영합니다!
+                    
+📋 사용 방법:
+1. 왼쪽에 약물 정보를 입력하세요
+2. 복용 기간을 설정하세요 (기본 30일)
+3. "일정 생성하기" 버튼을 클릭하세요
+4. 구글 캘린더에 자동으로 복용 일정이 추가됩니다
+
+✨ 기능:
+• 자연어 처리로 약물 정보 자동 분석
+• 복용 시간 자동 계산 (아침/점심/저녁/식전/식후)
+• 반복 일정 자동 생성
+• 복용 시간 10분 전 + 정시 알림 설정
+• 한국 시간대 지원
+
+🔧 지원하는 입력 형식:
+• "약물명 용량 하루 N회 복용"
+• "약물명 복용시간 (아침/점심/저녁/식전/식후)"
+• 처방전이나 약국 설명서 텍스트
+• 여러 약물을 한 번에 입력 가능
+
+준비가 되셨으면 약물 정보를 입력해보세요!
+                </div>
+                
+                <div class="medication-list" id="medicationList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setExample(text) {
+            document.getElementById('medicationText').value = text;
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultArea').style.display = 'none';
+            document.getElementById('processBtn').disabled = true;
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('resultArea').style.display = 'block';
+            document.getElementById('processBtn').disabled = false;
+        }
+        
+        async function processMedication() {
+            const patientText = document.getElementById('medicationText').value.trim();
+            const durationDays = parseInt(document.getElementById('durationDays').value) || 30;
+            
+            if (!patientText) {
+                alert('약물 정보를 입력해주세요.');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/process_medication', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        patient_text: patientText,
+                        duration_days: durationDays
+                    })
+                });
+                
+                const data = await response.json();
+                hideLoading();
+                
+                if (data.success) {
+                    // 결과 메시지 표시
+                    document.getElementById('resultArea').textContent = data.messages.join('\n');
+                    
+                    // 약물 정보 카드 표시
+                    displayMedicationCards(data.medications);
+                    
+                    // 성공 알림
+                    alert(`✅ 성공! ${data.created_events.length}개의 복용 일정이 생성되었습니다.`);
+                } else {
+                    document.getElementById('resultArea').textContent = data.messages ? data.messages.join('\n') : data.error;
+                }
+                
+            } catch (error) {
+                hideLoading();
+                document.getElementById('resultArea').textContent = `❌ 오류 발생: ${error.message}`;
+            }
+        }
+        
+        function displayMedicationCards(medications) {
+            const listContainer = document.getElementById('medicationList');
+            listContainer.innerHTML = '';
+            
+            if (medications && medications.length > 0) {
+                medications.forEach((med, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'medication-item';
+                    card.innerHTML = `
+                        <h4>💊 ${med.name}</h4>
+                        <p><strong>복용 횟수:</strong> 하루 ${med.frequency}회</p>
+                        <p><strong>복용 시간:</strong> ${med.times.join(', ')}</p>
+                    `;
+                    listContainer.appendChild(card);
+                });
+            }
+        }
+        
+        async function getEvents() {
+            showLoading();
+            
+            try {
+                const response = await fetch('/get_events');
+                const data = await response.json();
+                hideLoading();
+                
+                if (data.success) {
+                    if (data.events.length === 0) {
+                        document.getElementById('resultArea').textContent = '💊 현재 등록된 약물 복용 일정이 없습니다.';
+                    } else {
+                        let resultText = `📋 약물 복용 일정 (총 ${data.events.length}개)\n\n`;
+                        data.events.forEach((event, index) => {
+                            resultText += `${index + 1}. ${event.title}\n`;
+                            resultText += `   ⏰ ${event.start_time}\n\n`;
+                        });
+                        document.getElementById('resultArea').textContent = resultText;
+                    }
+                } else {
+                    document.getElementById('resultArea').textContent = `❌ 일정 조회 오류: ${data.error}`;
+                }
+                
+            } catch (error) {
+                hideLoading();
+                document.getElementById('resultArea').textContent = `❌ 오류 발생: ${error.message}`;
+            }
+        }
+        
+        async function deleteAllEvents() {
+            if (!confirm('⚠️ 모든 약물 복용 일정을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/delete_events', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                hideLoading();
+                
+                if (data.success) {
+                    document.getElementById('resultArea').textContent = `✅ ${data.deleted_count}개의 약물 일정이 삭제되었습니다.`;
+                    document.getElementById('medicationList').innerHTML = '';
+                } else {
+                    document.getElementById('resultArea').textContent = `❌ 삭제 오류: ${data.error}`;
+                }
+                
+            } catch (error) {
+                hideLoading();
+                document.getElementById('resultArea').textContent = `❌ 오류 발생: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
