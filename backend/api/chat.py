@@ -18,18 +18,31 @@ def get_watson_model() -> Model:
     """IBM Watson 모델 인스턴스를 반환합니다 (Singleton 패턴)"""
     global _watson_model
     if _watson_model is None:
-        # IBM Watson 자격 증명 설정
-        creds = {
-            "url": settings.WATSONX_API_URL.split('/ml/v1')[0],  # Base URL만 추출
-            "apikey": settings.WATSONX_API_KEY
-        }
+        # 설정 검증
+        if not settings.WATSONX_API_KEY or not settings.WATSONX_PROJECT_ID:
+            raise HTTPException(
+                status_code=500, 
+                detail="IBM Watson API 키 또는 프로젝트 ID가 설정되지 않았습니다."
+            )
         
-        # 모델 인스턴스 생성
-        _watson_model = Model(
-            model_id='ibm/granite-3-3-8b-instruct',
-            credentials=creds,
-            project_id=settings.WATSONX_PROJECT_ID
-        )
+        try:
+            # IBM Watson 자격 증명 설정
+            creds = {
+                "url": settings.WATSONX_API_URL,
+                "apikey": settings.WATSONX_API_KEY
+            }
+            
+            # 모델 인스턴스 생성
+            _watson_model = Model(
+                model_id='ibm/granite-3-3-8b-instruct',
+                credentials=creds,
+                project_id=settings.WATSONX_PROJECT_ID
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"IBM Watson 모델 초기화 실패: {str(e)}"
+            )
     return _watson_model
 
 def get_medical_completion(prompt: str) -> str:
