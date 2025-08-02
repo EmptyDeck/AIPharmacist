@@ -49,13 +49,13 @@ export const MessageList = styled.div`
 export const MessageBubble = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: ${({ isUser }) => (isUser ? "flex-end" : "flex-start")};
+  align-items: ${(props) => (props.$isUser ? "flex-end" : "flex-start")};
   animation: ${fadeInUp} 0.3s ease forwards;
 `;
 
 export const MessageContent = styled.div`
-  background: ${({ isUser }) => (isUser ? "#3b82f6" : "#ffffff")};
-  color: ${({ isUser }) => (isUser ? "white" : "#1f2937")};
+  background: ${({ $isUser }) => ($isUser ? "#3b82f6" : "#ffffff")};
+  color: ${({ $isUser }) => ($isUser ? "white" : "#1f2937")};
   padding: 10px 14px;
   border-radius: 12px;
   max-width: 70%;
@@ -67,7 +67,7 @@ export const Timestamp = styled.div`
   margin-top: 4px;
   font-size: 10px;
   color: #6b7280;
-  text-align: ${({ isUser }) => (isUser ? "right" : "left")};
+  text-align: text-align: ${({ $isUser }) => ($isUser ? "right" : "left")};
 `;
 
 export const InputArea = styled.div`

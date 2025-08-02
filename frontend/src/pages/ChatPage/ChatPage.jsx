@@ -2,20 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import * as S from "./ChatPage.style";
-import {
-  Send,
-  AlertCircle,
-  Pill,
-  FileText,
-  User,
-  Activity,
-  ChevronDown,
-  ThumbsUp,
-  ThumbsDown,
-  FileUp,
-  Mail,
-  Mic,
-} from "lucide-react";
+import { Send, FileUp, Mail, Mic } from "lucide-react";
 import { postChat, getHealth, getLogin, getCallback } from "../../apis/apis";
 const commonConditions = [
   "당뇨병",
@@ -97,15 +84,16 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
+      console.log("보낼 메시지:", userMessage);
       const response = await postChat(userMessage);
       const botMessage = {
         id: (Date.now() + 1).toString(),
         type: "bot",
         content: response.answer,
-        confidence: response.confidence_score,
-        warnings: response.safety_warnings,
-        interactions: response.drug_interactions,
-        references: response.references,
+        confidence: response.model_metadata?.confidence,
+        warnings: [],
+        interactions: [],
+        references: [],
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, botMessage]);
@@ -191,11 +179,11 @@ export default function ChatPage() {
       <S.ChatContainer>
         <S.MessageList>
           {messages.map((message) => (
-            <S.MessageBubble key={message.id} isUser={message.type === "user"}>
-              <S.MessageContent isUser={message.type === "user"}>
+            <S.MessageBubble key={message.id} $isUser={message.type === "user"}>
+              <S.MessageContent $isUser={message.type === "user"}>
                 {message.content}
               </S.MessageContent>
-              <S.Timestamp isUser={message.type === "user"}>
+              <S.Timestamp $isUser={message.type === "user"}>
                 {message.timestamp.toLocaleTimeString()}
               </S.Timestamp>
             </S.MessageBubble>
