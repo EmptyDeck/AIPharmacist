@@ -2,3 +2,6 @@
 **/.DS_Store
 **/.env
 .env
+/a/node_modules
+/Sejik/web_test/frontend
+backend/api/env.env

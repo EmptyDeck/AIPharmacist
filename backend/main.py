@@ -18,16 +18,16 @@ app.add_middleware(
         "http://localhost:8081",
         "http://localhost:5173",  # Vite 개발 서버
         "http://localhost:4200",  # Angular 개발 서버
-        
+
         # 프로덕션 도메인 (나중에 추가)
         # "https://your-frontend-domain.com",
         # "https://www.your-frontend-domain.com",
-        
+
         # AI 모델 서버 (팀원이 만든 모델)
         "http://localhost:5000",  # 로컬 AI 모델 서버
         "http://127.0.0.1:5000",
         # "http://ai-model-server-ip:5000",  # 팀원 AI 서버 IP
-        
+
         # 개발/테스트용
         "*",  # 개발 단계에서만 사용 (프로덕션에서는 제거 필요)
     ],
@@ -40,16 +40,19 @@ app.add_middleware(
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(email.router, prefix="/api", tags=["Email"])
-app.include_router(file_upload.router, prefix="/api/files", tags=["File Upload"])
+app.include_router(file_upload.router, prefix="/api/files",
+                   tags=["File Upload"])
+
 
 @app.get("/")
 def root():
     return {"message": "Dr.watson Backend Server", "status": "running"}
+
 
 if __name__ == "__main__":
     import uvicorn
     print("Starting Dr.Watson Backend Server...")
     print("URL: http://localhost:8001")
     print("API Docs: http://localhost:8001/docs")
-    
+
     uvicorn.run(app, host="127.0.0.1", port=8001)
