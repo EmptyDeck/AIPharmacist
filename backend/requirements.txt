@@ -38,3 +38,8 @@ websockets==15.0.1
 # IBM Watson Machine Learning SDK
 ibm-watson-machine-learning==1.0.368
 
+# OCR Dependencies
+pytesseract==0.3.13
+Pillow==10.4.0
+PyPDF2==3.0.1
+
