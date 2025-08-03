@@ -1,54 +1,75 @@
 import { jsonAxios } from "../axios";
 
-// 채팅 생성
+// 스마트 API 함수
+const smartApiCall = async (endpoint, data = null, method = 'POST') => {
+  const urls = [
+    'http://localhost:8001',  // 개발환경
+    '',                       // 배포환경 (상대경로)
+  ];
+  
+  for (const baseURL of urls) {
+    try {
+      console.log(`시도 중: ${baseURL || '배포서버'}${endpoint}`);
+      
+      const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+      };
+      
+      // GET 요청이 아닐 때만 body 추가
+      if (method !== 'GET' && data) {
+        options.body = JSON.stringify(data);
+      }
+      
+      const response = await fetch(`${baseURL}${endpoint}`, options);
+      
+      if (response.ok) {
+        console.log(`✅ 성공: ${baseURL || '배포서버'}`);
+        return await response.json();
+      }
+    } catch (error) {
+      console.log(`❌ 실패: ${baseURL || '배포서버'}`);
+      continue;
+    }
+  }
+  
+  throw new Error('모든 서버 연결 실패');
+};
+
+// 모든 API 함수들을 스마트 버전으로 교체
 export const postChat = async (userMessage) => {
-  const response = await jsonAxios.post(`/api/chat`, {
+  return await smartApiCall('/api/chat', {
     question: userMessage.content,
     underlying_diseases: userMessage.conditions || [],
     currentMedications: userMessage.medications || [],
   });
-  console.log("BASE URL:", jsonAxios.defaults.baseURL);
-  return response.data;
 };
 
-// 채팅 서비스 상태 조회
 export const getHealth = async () => {
-  const response = await jsonAxios.get(`/api/health`);
-  return response;
+  return await smartApiCall('/api/health', null, 'GET');
 };
 
-// 네이버 로그인 조회
 export const getLogin = async () => {
-  const response = await jsonAxios.get(`/auth/login`);
-  return response;
+  return await smartApiCall('/auth/login', null, 'GET');
 };
 
-// 네이버 로그인 콜백
 export const getCallback = async () => {
-  const response = await jsonAxios.get(`/auth/callback`);
-  return response;
+  return await smartApiCall('/auth/callback', null, 'GET');
 };
 
-// 이메일 단수 생성
 export const postEmail = async () => {
-  const response = await jsonAxios.get(`/api/send`);
-  return response;
+  return await smartApiCall('/api/send', null, 'GET'); // 이것도 GET인가요?
 };
 
-// 이메일 복수 생성
 export const postEmails = async () => {
-  const response = await jsonAxios.get(`/api/send-bulk`);
-  return response;
+  return await smartApiCall('/api/send-bulk', null, 'GET');
 };
 
-// 이메일 조회
 export const getEmail = async () => {
-  const response = await jsonAxios.get(`/api/test`);
-  return response;
+  return await smartApiCall('/api/test', null, 'GET');
 };
 
-// 디폴트 상태
 export const getDefault = async () => {
-  const response = await jsonAxios.get(`/`);
-  return response;
+  return await smartApiCall('/', null, 'GET');
 };
+

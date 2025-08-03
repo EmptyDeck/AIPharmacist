@@ -1,0 +1,12 @@
+# JetBrains IDEs
+.idea/
+
+
+.env
+
+TEAM_MODEL_INTEGRATION.md
+
+
+# Byte-code files
+*.pyc
+__pycache__/
