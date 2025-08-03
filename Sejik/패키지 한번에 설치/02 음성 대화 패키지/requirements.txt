@@ -1,0 +1,5 @@
+pyaudio
+requests
+ibm-watson-machine-learning
+python-dotenv
+numpy
