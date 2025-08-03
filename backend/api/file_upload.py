@@ -53,14 +53,12 @@ def is_allowed_file(filename: str) -> bool:
 
 @router.post("/upload", summary="단일 파일 업로드")
 async def upload_file(
-    file: UploadFile = File(..., description="업로드할 파일"),
-    description: Optional[str] = Form(None, description="파일 설명")
+    file: UploadFile = File(..., description="업로드할 파일")
 ):
     """
     단일 파일을 업로드하고 OCR 처리를 수행합니다.
     
     - **file**: 업로드할 파일 (OCR 처리 가능한 파일만)
-    - **description**: 파일에 대한 설명 (선택사항)
     
     **지원 파일 형식:**
     - 이미지: jpg, jpeg, png, gif, bmp, tiff
@@ -116,7 +114,6 @@ async def upload_file(
             "saved_filename": new_filename,
             "file_size": len(file_content),
             "file_category": category,
-            "description": description,
             "upload_time": datetime.now().isoformat(),
             "file_url": f"/api/files/download/{file_id}"
         }
@@ -133,23 +130,16 @@ async def upload_file(
 
 @router.post("/upload-multiple", summary="다중 파일 업로드")
 async def upload_multiple_files(
-    files: List[UploadFile] = File(..., description="업로드할 파일들"),
-    descriptions: Optional[List[str]] = Form(None, description="파일별 설명 (파일 순서와 동일하게)")
+    files: List[UploadFile] = File(..., description="업로드할 파일들")
 ):
     """
     여러 개의 파일을 한 번에 업로드하고 OCR 처리를 수행합니다.
     
     - **files**: 업로드할 파일들 (OCR 처리 가능한 파일만, 최대 5개)
-    - **descriptions**: 각 파일에 대한 설명 (선택사항)
     
     **지원 파일 형식:**
     - 이미지: jpg, jpeg, png, gif, bmp, tiff
     - 문서: pdf
-    
-    **설명 입력 방법:**
-    - 설명 개수는 파일 개수보다 적어도 됩니다
-    - files[0] → descriptions[0], files[1] → descriptions[1] 순서대로 매칭
-    - 설명이 없는 파일은 자동으로 null 처리
     """
     
     if len(files) > 5:
@@ -201,18 +191,12 @@ async def upload_multiple_files(
                     "text": ""
                 }
             
-            # 개별 파일 설명 가져오기 (유연한 방식)
-            file_description = None
-            if descriptions and i < len(descriptions):
-                file_description = descriptions[i] if descriptions[i].strip() else None
-            
             upload_result = {
                 "file_id": file_id,
                 "original_filename": file.filename,
                 "saved_filename": new_filename,
                 "file_size": len(file_content),
                 "file_category": category,
-                "description": file_description,
                 "upload_time": datetime.now().isoformat(),
                 "file_url": f"/api/files/download/{file_id}"
             }
@@ -233,8 +217,7 @@ async def upload_multiple_files(
         "uploaded_files": upload_results,
         "failed_files": failed_uploads,
         "total_uploaded": len(upload_results),
-        "total_failed": len(failed_uploads),
-        "descriptions_provided": len(descriptions) if descriptions else 0
+        "total_failed": len(failed_uploads)
     }
 
 
