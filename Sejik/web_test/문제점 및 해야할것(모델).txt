@@ -1,0 +1,24 @@
+상황설명
+1. 현재 RAG생성 안됨 -> Agent 만들기에서 벡터DB만들어야함 -> Agent에서는 최대 4mb파일밖에 못받음 -> e약은요.csv는 9mb임-> e약은요 txt를 반으로 나누어서 Agent를 2개 만들어야함
+
+
+
+
+
+1. explainAI 따로 만들기 (e약은요 대화용 자료 따로 만들어서) [에이전트]
+1.1 explainAI 엔드포인트 .env 에 추가 및 'IBM_DoctorAI\Sejik\web_test\backend\core\config.py' 에 추가해야함
+1.2 explainAI system_prompt,user_prompt 이미 watsonX에서 넣었는데 코드에서 system_prompt,user_prompt 없이 어떻게 해야 하냐고 멘토한테 물어봐야함
+
+2. warnAI 따로 만들기 (e약은요 경고용 자료 따로 만들어서) [에이전트]
+2.1 warnAI 엔드포인트 .env 에 추가 및 'IBM_DoctorAI\Sejik\web_test\backend\core\config.py' 에 추가해야함
+2.2 warnAI system_prompt,user_prompt 이미 watsonX에서 넣었는데 코드에서 system_prompt,user_prompt 없이 어떻게 해야 하냐고 멘토한테 물어봐야함
+
+
+3. chat.py 따로 만들기 (예시 많이 넣고 엔드포인트 넣어서) [프롬프트]
+3.1 chat.py 평가 자료 만들기
+3.2 chat.py 교체하기 (현재 일반 llm으로 연결되어있음 성능 매우 안좋음)
+3.3 chat.py설명 : 이 AI는 사용자의 입력을 보고 일반 대답인 general,경고인 warn, 설명인 explain, 캘린더 추가인 add_cal이 있음 (classify_user_input 참고)
+ 
+4. endpoint가 있는 AI는 변수{default} 를 넣어야 하는데 어디다 넣어야 하는지 까먹음 (특히 cal_agent.py)
+
+5. cal_agent.py SCOPES,CALENDAR_ID 를 .env에서 불러오게 변경해야함

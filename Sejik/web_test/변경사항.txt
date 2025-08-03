@@ -1,0 +1,10 @@
+1. frontend apis.js 에서 로컬, AWS배포 상황에서 로컬, 상대주소 둘다 가능하도록 변경 (그래야 배포도 가능하고 로컬에서도 개발이 가능하니깐)
+이건 AWS환경에서 되는지 확인해야함. 안될수도 있어서 sejik/web_test에서만 수정한것임
+
+const smartApiCall = async (endpoint, data = null, method = 'POST') => {
+  const urls = [
+    'http://localhost:8001',  // 개발환경
+    '',                       // 배포환경 (상대경로)
+  ];
+
+2. chat.py에 서로 다른 3개의 LLM 불러오기 기능 추가 + 캘린더 추가 기능 구연함

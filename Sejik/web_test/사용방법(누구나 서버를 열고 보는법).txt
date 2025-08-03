@@ -1,0 +1,22 @@
+##조건 (1~4번은 환경이름이 다를경우 알아서 환경 열기+필요한거 설치하기. 5~8번은 node js, react 설치후 가능)
+## 패키지 설치 "IBM_DoctorAI\Sejik\패키지 한번에 설치" 에서 설치할것 (install.ipynb 실행만 하면 됨)
+
+1. 아나콘다 프롬프트를 연다
+2. conda activate ibm
+3. cd 치고 스페이스 치고 backend폴더를 터미널로 드래그
+4. python main.py 치고 엔터
+5. 
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:11839 - "OPTIONS /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:11839 - "POST /api/chat HTTP/1.1" 200 OK
+
+이렇게 뜨면 성공
+
+5. 새로운 터미널을 연다(PowerShell, CMD, Anaconda Prompt 상관없음)
+6. cd 치고 스페이스 치고 frontend폴더를 터미널로 드래그
+7. npm start 치고 엔터
+8. 자동으로 브라우저 열림
+
+주의: 백엔드(1-4번) 먼저 실행하고 프론트엔드(5-7번) 나중에 실행
+종료: 각 터미널에서 Ctrl+C
