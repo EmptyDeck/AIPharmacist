@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 import shutil
 from datetime import datetime, timedelta
-from utils.ocr_processor import analyze_medical_document
+from utils.ocr.ocr_processor import analyze_medical_document
 
 # APIRouter 인스턴스 생성
 router = APIRouter()
