@@ -19,9 +19,18 @@ class Settings(BaseSettings):
     MODEL_API_URL: str = "http://localhost:5000"  # 팀원 모델 서버 주소
     MODEL_API_KEY: str = ""  # 팀원 모델 API 키 (필요시)
     
-    # Naver OAuth 설정
-    NAVER_CLIENT_ID: str
-    NAVER_CLIENT_SECRET: str
+    # Naver OAuth 설정 (선택사항)
+    NAVER_CLIENT_ID: str = ""
+    NAVER_CLIENT_SECRET: str = ""
+    
+    # Google OAuth 설정
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_PROJECT_ID: str = ""
+    GOOGLE_AUTH_URI: str = "https://accounts.google.com/o/oauth2/auth"
+    GOOGLE_TOKEN_URI: str = "https://oauth2.googleapis.com/token" 
+    GOOGLE_AUTH_PROVIDER_X509_CERT_URL: str = "https://www.googleapis.com/oauth2/v1/certs"
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URIS: str = "http://localhost"
 
 # 설정 객체 생성
 settings = Settings()
