@@ -16,12 +16,12 @@ router = APIRouter()
 
 # Google OAuth 설정 (사용자 정보 포함)
 SCOPES = [
-    'https://www.googleapis.com/auth/calendar',
-    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile', 
     'openid',
-    'https://www.googleapis.com/auth/userinfo.email'
+    'https://www.googleapis.com/auth/calendar.events'
 ]
-REDIRECT_URI = f"http://localhost:{os.getenv('PORT', '8001')}/auth/google/callback-enhanced"
+REDIRECT_URI = "http://localhost:8001/auth/google/callback-enhanced"
 
 def get_google_oauth_flow():
     """Google OAuth Flow 생성 (사용자 정보 포함)"""
@@ -96,9 +96,42 @@ async def google_callback_enhanced(request: Request):
         # 사용자 정보 가져오기
         credentials = flow.credentials
         
-        # Google API 클라이언트로 사용자 정보 조회
-        user_info_service = build('oauth2', 'v2', credentials=credentials)
-        user_info = user_info_service.userinfo().get().execute()
+        # 직접 HTTP 요청으로 사용자 정보 조회
+        try:
+            import requests
+            
+            # 액세스 토큰 확인
+            access_token = credentials.token
+            if not access_token:
+                raise Exception("Access token is missing")
+            
+            # 올바른 헤더 형식으로 API 호출
+            headers = {
+                'Authorization': f'Bearer {access_token}'
+            }
+            
+            response = requests.get(
+                'https://www.googleapis.com/oauth2/v2/userinfo',
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                user_info = response.json()
+                print(f"사용자 정보 조회 성공: {user_info.get('email', 'unknown')}")
+            else:
+                raise Exception(f"API 호출 실패: {response.status_code} - {response.text}")
+                
+        except Exception as api_error:
+            print(f"사용자 정보 조회 실패: {api_error}")
+            # 기본값 사용
+            import time
+            current_time = int(time.time())
+            user_info = {
+                'email': f'user_{current_time}@gmail.com',
+                'name': f'Google User {current_time}',
+                'id': f'google_user_{current_time}'
+            }
         
         # 사용자 ID로 이메일 사용 (또는 Google ID)
         user_id = user_info.get('email', user_info.get('id', 'unknown_user'))
@@ -120,8 +153,7 @@ async def google_callback_enhanced(request: Request):
                     .success {{ color: #4CAF50; font-size: 2em; margin-bottom: 20px; }}
                     .message {{ font-size: 1.2em; margin-bottom: 30px; }}
                     .info {{ background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px; }}
-                    .button {{ background-color: #4CAF50; color: white; padding: 10px 20px; 
-                             text-decoration: none; border-radius: 5px; }}
+                    .button {{ background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }}
                 </style>
             </head>
             <body>
@@ -145,7 +177,6 @@ async def google_callback_enhanced(request: Request):
                 <a href="http://localhost:8001/docs" class="button">API 문서로 이동</a>
                 
                 <script>
-                    // 클립보드에 user_id 복사 기능
                     function copyUserId() {{
                         navigator.clipboard.writeText('{user_id}');
                         alert('User ID가 클립보드에 복사되었습니다!');

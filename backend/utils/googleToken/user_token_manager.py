@@ -52,6 +52,17 @@ class UserTokenManager:
             with open(token_file, 'r') as f:
                 token_data = json.load(f)
             
+            # 필수 scope 검증
+            required_scopes = {'openid', 'email', 'profile'}
+            current_scopes = set(token_data.get('scopes', []))
+            
+            # openid 또는 userinfo 관련 scope가 없으면 토큰 삭제
+            if not (required_scopes.intersection(current_scopes) or 
+                   any('userinfo' in scope for scope in current_scopes)):
+                print(f"토큰 {user_id}에 필요한 scope가 없습니다. 삭제합니다.")
+                token_file.unlink()
+                return None
+            
             credentials = Credentials(
                 token=token_data.get('token'),
                 refresh_token=token_data.get('refresh_token'),
@@ -60,6 +71,21 @@ class UserTokenManager:
                 client_secret=token_data.get('client_secret'),
                 scopes=token_data.get('scopes')
             )
+            
+            # 토큰이 만료되었다면 자동 갱신 시도
+            if credentials.expired and credentials.refresh_token:
+                try:
+                    import google.auth.transport.requests
+                    request = google.auth.transport.requests.Request()
+                    credentials.refresh(request)
+                    
+                    # 갱신된 토큰 저장
+                    self.save_user_token(user_id, credentials)
+                    print(f"사용자 {user_id}의 토큰이 자동 갱신되었습니다")
+                    
+                except Exception as refresh_error:
+                    print(f"토큰 갱신 실패 ({user_id}): {refresh_error}")
+                    return None
             
             return credentials
             
