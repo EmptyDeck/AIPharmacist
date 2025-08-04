@@ -53,7 +53,8 @@ def get_watson_model() -> Model:
                 detail=f"IBM Watson 모델 초기화 실패: {str(e)}"
             )
     return _watson_model
-
+    
+    return _explain_ai, _warn_ai
 def get_specialized_agents():
     """전문 AI 에이전트들을 초기화하고 반환합니다"""
     global _explain_ai, _warn_ai, _calendar_ai
@@ -67,8 +68,6 @@ def get_specialized_agents():
     
     return _explain_ai, _warn_ai, _calendar_ai
 
-    
-    return _explain_ai, _warn_ai
 
 def classify_user_input(question: str) -> str:
     """사용자 입력을 간단히 분류 (키워드 기반)"""
@@ -81,7 +80,7 @@ def classify_user_input(question: str) -> str:
     
     # 약물 설명 관련 키워드  
     explain_keywords = ['효능', '성분', '복용법', '작용', '원리', '어떤', '무엇', '설명', '정보']
-    drug_names = ['타이레놀', '아스피린', '이부프로펜', '약', '의약품', '처방약']
+    drug_names = ['약', '의약품', '처방약']
     if (any(keyword in question_lower for keyword in explain_keywords) and 
         any(drug in question_lower for drug in drug_names)) or any(drug in question_lower for drug in drug_names):
         return "explain"
@@ -129,61 +128,66 @@ async def get_chat_response(request: ChatRequest):
 
         context_text = " | ".join(user_context) if user_context else "특별한 기저질환이나 복용 약물 없음"
         
-        # 1단계: 간단한 키워드 기반 분류
-        classification = classify_user_input(request.question)
-        print(f"[INFO] 분류 결과: {classification}")
+        # 먼저 세션 확인 (캘린더 확인 대기 중인지)
+        user_id = "default"  # 실제로는 사용자 ID 사용
         
-        agent_used = "MainChat"
-        ai_response = ""
-        loop = asyncio.get_event_loop()
-        
-        if classification == "explain":
-            # 약물 설명 AI 호출
-            print("[INFO] ExplainAI 호출 중...")
-            explain_ai, _ = get_specialized_agents()
-            agent_used = "ExplainAI"
-            ai_response = await loop.run_in_executor(
-                None, explain_ai.explain_drug, request.question
-            )
-            
-        elif classification == "warn":
-            # 약물 경고 AI 호출
-            print("[INFO] WarnAI 호출 중...")
-            _, warn_ai = get_specialized_agents()
-            agent_used = "WarnAI"
-            ai_response = await loop.run_in_executor(
-                None, warn_ai.get_drug_warnings, request.question
-            )
-            
-        elif classification == "add_cal":
-            # 캘린더 AI 호출
-            print("[INFO] CalendarAI 호출 중...")
+        if user_id in _user_sessions and _user_sessions[user_id].get('waiting_confirmation'):
+            # 캘린더 확인 응답 처리 (분류 건너뛰기)
+            print("[INFO] 캘린더 확인 응답 처리 중...")
             explain_ai, warn_ai, calendar_ai = get_specialized_agents()
             agent_used = "CalendarAI"
             
-            # 사용자 세션 확인 (약물 정보 대기 중인지)
-            user_id = "default"  # 실제로는 사용자 ID 사용
-            
-            if user_id in _user_sessions and _user_sessions[user_id].get('waiting_confirmation'):
-                # 2단계: 사용자 확인 응답 처리
-                if calendar_ai.check_confirmation(request.question):
-                    # 캘린더 추가 진행
-                    original_text = _user_sessions[user_id]['medication_text']
-                    result = calendar_ai.process_calendar_addition(original_text)
-                    
-                    if result['success']:
-                        ai_response = f"✅ 성공적으로 캘린더에 추가되었습니다!\n\n{result['message']}"
-                    else:
-                        ai_response = f"❌ 캘린더 추가 실패\n\n{result['message']}"
-                    
-                    # 세션 정리
-                    del _user_sessions[user_id]
+            if calendar_ai.check_confirmation(request.question):
+                # 캘린더 추가 진행
+                print("[INFO] 캘린더 추가 진행...")
+                original_text = _user_sessions[user_id]['medication_text']
+                result = calendar_ai.process_calendar_addition(original_text)
+                
+                if result['success']:
+                    ai_response = f"✅ 성공적으로 캘린더에 추가되었습니다!\n\n{result['message']}"
                 else:
-                    # 거부 응답
-                    ai_response = "알겠습니다. 캘린더 추가를 취소했습니다. 다른 도움이 필요하시면 언제든 말씀해주세요."
-                    del _user_sessions[user_id]
+                    ai_response = f"❌ 캘린더 추가 실패\n\n{result['message']}"
+                
+                # 세션 정리
+                del _user_sessions[user_id]
             else:
-                # 1단계: 약물 정보 분석 + 제안
+                # 거부 응답
+                ai_response = "알겠습니다. 캘린더 추가를 취소했습니다. 다른 도움이 필요하시면 언제든 말씀해주세요."
+                del _user_sessions[user_id]
+        
+        else:
+            # 일반적인 분류 처리
+            classification = classify_user_input(request.question)
+            print(f"[INFO] 분류 결과: {classification}")
+            
+            agent_used = "MainChat"
+            ai_response = ""
+            loop = asyncio.get_event_loop()
+            
+            if classification == "explain":
+                # 약물 설명 AI 호출
+                print("[INFO] ExplainAI 호출 중...")
+                explain_ai, _, _ = get_specialized_agents()
+                agent_used = "ExplainAI"
+                ai_response = await loop.run_in_executor(
+                    None, explain_ai.explain_drug, request.question
+                )
+                
+            elif classification == "warn":
+                # 약물 경고 AI 호출
+                print("[INFO] WarnAI 호출 중...")
+                _, warn_ai, _ = get_specialized_agents()
+                agent_used = "WarnAI"
+                ai_response = await loop.run_in_executor(
+                    None, warn_ai.get_drug_warnings, request.question
+                )
+                
+            elif classification == "add_cal":
+                # 캘린더 AI 호출 - 1단계 (약물 정보 분석 + 제안)
+                print("[INFO] CalendarAI 1단계 - 약물 정보 분석 중...")
+                explain_ai, warn_ai, calendar_ai = get_specialized_agents()
+                agent_used = "CalendarAI"
+                
                 ai_response = await loop.run_in_executor(
                     None, calendar_ai.analyze_medication_schedule, request.question
                 )
@@ -194,16 +198,14 @@ async def get_chat_response(request: ChatRequest):
                         'waiting_confirmation': True,
                         'medication_text': request.question
                     }
-
-
-
-            
-        else:
-            # 일반 대화 - 메인 채팅에서 직접 처리
-            print("[INFO] 일반 대화 처리 중...")
-            agent_used = "MainChat"
-            
-            general_prompt = f"""당신은 전문적인 의료 AI 어시스턴트입니다. 다음 지침을 따라 응답해주세요:
+                    print(f"[INFO] 캘린더 확인 세션 저장됨: {user_id}")
+                
+            else:
+                # 일반 대화 - 메인 채팅에서 직접 처리
+                print("[INFO] 일반 대화 처리 중...")
+                agent_used = "MainChat"
+                
+                general_prompt = f"""당신은 전문적인 의료 AI 어시스턴트입니다. 다음 지침을 따라 응답해주세요:
 
 지침:
 1. 정확하고 신뢰할 수 있는 의료 정보만 제공하세요
@@ -218,10 +220,10 @@ async def get_chat_response(request: ChatRequest):
 
 위 정보를 바탕으로 적절한 의료 조언을 제공해주세요:
 """
-            
-            ai_response = await loop.run_in_executor(
-                None, get_medical_completion, general_prompt
-            )
+                
+                ai_response = await loop.run_in_executor(
+                    None, get_medical_completion, general_prompt
+                )
         
         # 성공 응답 반환
         return {
@@ -231,7 +233,7 @@ async def get_chat_response(request: ChatRequest):
                 "medications": request.currentMedications
             },
             "model_metadata": {
-                "classification": classification,
+                "classification": classification if user_id not in _user_sessions else "calendar_confirmation",
                 "agent_used": agent_used,
                 "model_name": "IBM Granite 3.3 8B Instruct",
                 "model_provider": "IBM Watson",
@@ -245,6 +247,7 @@ async def get_chat_response(request: ChatRequest):
         # 실패 시 fallback 응답
         print(f"[ERROR] 채팅 처리 실패: {str(e)}")
         return await _get_fallback_response(request, f"처리 실패: {str(e)}")
+
 
 async def _get_fallback_response(request: ChatRequest, error_msg: str):
     """AI 모델 연결 실패 시 기본 응답을 제공합니다."""
