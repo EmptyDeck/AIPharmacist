@@ -35,7 +35,7 @@ class ExplainAI:
 항상 정확한 정보를 제공하되, 개인차가 있을 수 있음을 명시하고
 구체적인 복용 지침은 전문의나 약사와 상담할 것을 권해주세요."""
 
-        user_prompt = f"약물 설명 요청: {user_question}"
+        user_prompt = {f"약물 설명 요청: {user_question}"}
         
         payload = {
             "messages": [
