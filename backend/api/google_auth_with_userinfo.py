@@ -96,7 +96,7 @@ async def google_callback_enhanced(request: Request):
         # 사용자 정보 가져오기
         credentials = flow.credentials
         
-        # 직접 HTTP 요청으로 사용자 정보 조회
+        # 직접 HTTP 요청으로 사용자 정보 조회 (user_id를 먼저 얻기 위함)
         try:
             import requests
             
@@ -136,6 +136,25 @@ async def google_callback_enhanced(request: Request):
         # 사용자 ID로 이메일 사용 (또는 Google ID)
         user_id = user_info.get('email', user_info.get('id', 'unknown_user'))
         user_name = user_info.get('name', 'Unknown User')
+        
+        # 기존 토큰에서 refresh_token 복원 (Google이 새로 주지 않는 경우)
+        if not credentials.refresh_token:
+            try:
+                existing_credentials = token_manager.load_user_token(user_id)
+                if existing_credentials and existing_credentials.refresh_token:
+                    # 새로운 credentials 객체 생성 (기존 refresh_token 포함)
+                    from google.oauth2.credentials import Credentials
+                    credentials = Credentials(
+                        token=credentials.token,
+                        refresh_token=existing_credentials.refresh_token,
+                        token_uri=credentials.token_uri,
+                        client_id=credentials.client_id,
+                        client_secret=credentials.client_secret,
+                        scopes=credentials.scopes
+                    )
+                    print(f"사용자 {user_id}의 기존 refresh_token을 복원했습니다")
+            except Exception as restore_error:
+                print(f"기존 토큰 복원 실패 ({user_id}): {restore_error}")
         
         # 사용자별 토큰 저장
         success = token_manager.save_user_token(user_id, credentials)
