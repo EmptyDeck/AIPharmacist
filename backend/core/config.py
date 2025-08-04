@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     GOOGLE_AUTH_PROVIDER_X509_CERT_URL: str = "https://www.googleapis.com/oauth2/v1/certs"
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URIS: str = "http://localhost"
+    
+    # Database 설정
+    DATABASE_URL: str = "mysql+pymysql://username:password@localhost:3306/doctor_ai"
 
 # 설정 객체 생성
 settings = Settings()

@@ -1,13 +1,16 @@
-from fastapi import APIRouter, HTTPException, Request, Query
+from fastapi import APIRouter, HTTPException, Request, Query, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from core.config import settings
 from utils.googleToken.user_token_manager import token_manager
+from database import get_db, User
+from sqlalchemy.orm import Session
 import os
 import json
 from typing import Optional
+from datetime import datetime
 
 # 개발 환경에서 HTTPS 요구사항 우회 (프로덕션에서는 제거 필요)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -82,7 +85,7 @@ async def google_login_enhanced():
 
 
 @router.get("/google/callback-enhanced", summary="Google OAuth 콜백 (사용자 정보 자동 획득)")
-async def google_callback_enhanced(request: Request):
+async def google_callback_enhanced(request: Request, db: Session = Depends(get_db)):
     """Google OAuth 콜백을 처리하고 사용자 정보를 자동으로 획득합니다"""
     
     try:
@@ -133,30 +136,57 @@ async def google_callback_enhanced(request: Request):
                 'id': f'google_user_{current_time}'
             }
         
-        # 사용자 ID로 이메일 사용 (또는 Google ID)
-        user_id = user_info.get('email', user_info.get('id', 'unknown_user'))
+        # 사용자 정보 추출
+        user_email = user_info.get('email', 'unknown@gmail.com')
         user_name = user_info.get('name', 'Unknown User')
+        google_id = user_info.get('id')
+        profile_picture = user_info.get('picture')
+        
+        # 데이터베이스에서 사용자 조회 또는 생성
+        db_user = db.query(User).filter(User.email == user_email).first()
+        
+        if not db_user:
+            # 새 사용자 생성
+            db_user = User(
+                email=user_email,
+                name=user_name,
+                google_id=google_id,
+                profile_picture=profile_picture,
+                access_token=credentials.token,
+                refresh_token=credentials.refresh_token,
+                token_expires_at=credentials.expiry
+            )
+            db.add(db_user)
+        else:
+            # 기존 사용자 업데이트
+            db_user.name = user_name
+            db_user.google_id = google_id
+            db_user.profile_picture = profile_picture
+            db_user.access_token = credentials.token
+            if credentials.refresh_token:
+                db_user.refresh_token = credentials.refresh_token
+            db_user.token_expires_at = credentials.expiry
+            db_user.updated_at = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(db_user)
+        
+        # 기존 토큰 관리자도 계속 사용 (호환성을 위해)
+        user_id = user_email
         
         # 기존 토큰에서 refresh_token 복원 (Google이 새로 주지 않는 경우)
-        if not credentials.refresh_token:
-            try:
-                existing_credentials = token_manager.load_user_token(user_id)
-                if existing_credentials and existing_credentials.refresh_token:
-                    # 새로운 credentials 객체 생성 (기존 refresh_token 포함)
-                    from google.oauth2.credentials import Credentials
-                    credentials = Credentials(
-                        token=credentials.token,
-                        refresh_token=existing_credentials.refresh_token,
-                        token_uri=credentials.token_uri,
-                        client_id=credentials.client_id,
-                        client_secret=credentials.client_secret,
-                        scopes=credentials.scopes
-                    )
-                    print(f"사용자 {user_id}의 기존 refresh_token을 복원했습니다")
-            except Exception as restore_error:
-                print(f"기존 토큰 복원 실패 ({user_id}): {restore_error}")
+        if not credentials.refresh_token and db_user.refresh_token:
+            credentials = Credentials(
+                token=credentials.token,
+                refresh_token=db_user.refresh_token,
+                token_uri=credentials.token_uri,
+                client_id=credentials.client_id,
+                client_secret=credentials.client_secret,
+                scopes=credentials.scopes
+            )
+            print(f"사용자 {user_id}의 DB에서 refresh_token을 복원했습니다")
         
-        # 사용자별 토큰 저장
+        # 사용자별 토큰 저장 (기존 시스템과 호환성 유지)
         success = token_manager.save_user_token(user_id, credentials)
         
         if not success:
