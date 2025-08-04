@@ -6,15 +6,14 @@ services:
     container_name: doctor_ai_mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: ibm.doctor-db
-      MYSQL_USER: ibm.doctor-user
-      MYSQL_PASSWORD: ibm.doctor-pass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./DB/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - doctor_ai_network
 
@@ -25,7 +24,7 @@ services:
     ports:
       - "8001:8000"
     environment:
-      - DATABASE_URL=mysql+pymysql://ibm.doctor-user:ibm.doctor-pass@mysql:3306/ibm.doctor-db
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
     depends_on:
       - mysql
     volumes:
