@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api import chat, auth, email, file_upload, calendar, google_auth_with_userinfo, users
-from database import create_tables
+from DB.database import create_tables
 
 # FastAPI 앱 인스턴스 생성
 app = FastAPI(title="Dr.Watson Backend API", version="1.0.0")

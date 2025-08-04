@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: doctor_ai_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: doctor_ai
+      MYSQL_USER: doctoruser
+      MYSQL_PASSWORD: doctorpass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - doctor_ai_network
+
+  backend:
+    build: .
+    container_name: doctor_ai_backend
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://doctoruser:doctorpass@mysql:3306/doctor_ai
+    depends_on:
+      - mysql
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./user_tokens:/app/user_tokens
+    networks:
+      - doctor_ai_network
+
+volumes:
+  mysql_data:
+
+networks:
+  doctor_ai_network:
+    driver: bridge

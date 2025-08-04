@@ -5,7 +5,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from core.config import settings
 from utils.googleToken.user_token_manager import token_manager
-from database import get_db, User
+from DB.database import get_db, User
 from sqlalchemy.orm import Session
 import os
 import json
