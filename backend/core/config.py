@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URIS: str = "http://3.27.201.191"
     
     # Database 설정
-    DATABASE_URL: str = "mysql+pymysql://doctoruser:doctorpass@localhost:3306/doctor_ai"
+    DATABASE_URL: str = "mysql+pymysql://ibm.doctor-user:ibm.doctor-pass@localhost:3306/ibm.doctor-db"
     
     # MySQL 설정 (docker-compose에서 사용)
     MYSQL_ROOT_PASSWORD: str = ""
