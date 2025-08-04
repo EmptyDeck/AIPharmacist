@@ -4,7 +4,7 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from core.config import settings
-from utils.user_token_manager import token_manager
+from utils.googleToken.user_token_manager import token_manager
 import os
 import json
 from typing import Optional
@@ -21,7 +21,7 @@ SCOPES = [
     'openid',
     'https://www.googleapis.com/auth/userinfo.email'
 ]
-REDIRECT_URI = "http://localhost:8001/auth/google/callback-enhanced"
+REDIRECT_URI = f"http://localhost:{os.getenv('PORT', '8001')}/auth/google/callback-enhanced"
 
 def get_google_oauth_flow():
     """Google OAuth Flow 생성 (사용자 정보 포함)"""
