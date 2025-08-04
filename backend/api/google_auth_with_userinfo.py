@@ -143,55 +143,9 @@ async def google_callback_enhanced(request: Request):
         if not success:
             raise HTTPException(status_code=500, detail="토큰 저장에 실패했습니다.")
         
-        # 성공 페이지 반환
-        html_content = f"""
-        <html>
-            <head>
-                <title>Google Calendar 인증 완료</title>
-                <style>
-                    body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; }}
-                    .success {{ color: #4CAF50; font-size: 2em; margin-bottom: 20px; }}
-                    .message {{ font-size: 1.2em; margin-bottom: 30px; }}
-                    .info {{ background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px; }}
-                    .button {{ background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }}
-                </style>
-            </head>
-            <body>
-                <div class="success">✅ 인증 완료!</div>
-                <div class="message">
-                    <strong>{user_name}</strong>님의 Google Calendar 연동이 성공적으로 완료되었습니다!
-                </div>
-                
-                <div class="info">
-                    <h3>📋 사용자 정보</h3>
-                    <p><strong>이름:</strong> {user_name}</p>
-                    <p><strong>이메일:</strong> {user_id}</p>
-                    <p><strong>User ID:</strong> {user_id}</p>
-                </div>
-                
-                <div class="message">
-                    이제 복약 일정을 자동으로 추가할 수 있습니다.<br>
-                    API 호출 시 <code>user_id: "{user_id}"</code>를 사용하세요.
-                </div>
-                
-                <a href="http://localhost:8001/docs" class="button">API 문서로 이동</a>
-                
-                <script>
-                    function copyUserId() {{
-                        navigator.clipboard.writeText('{user_id}');
-                        alert('User ID가 클립보드에 복사되었습니다!');
-                    }}
-                </script>
-                
-                <br><br>
-                <button onclick="copyUserId()" style="padding: 10px 20px; margin-top: 10px;">
-                    📋 User ID 복사
-                </button>
-            </body>
-        </html>
-        """
-        
-        return HTMLResponse(content=html_content)
+        # 프론트엔드로 리다이렉트 (사용자 정보를 쿼리 파라미터로 전달)
+        redirect_url = f"http://localhost:3000/chat?user_id={user_id}&user_name={user_name}&auth_success=true"
+        return RedirectResponse(url=redirect_url)
         
     except Exception as e:
         raise HTTPException(
