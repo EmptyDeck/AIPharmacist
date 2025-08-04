@@ -30,20 +30,32 @@ export const getCallback = async () => {
 };
 
 // 이메일 단수 생성
-export const postEmail = async () => {
-  const response = await jsonAxios.get(`/api/send`);
+export const postEmail = async (data) => {
+  const response = await jsonAxios.post(`/api/send`, data);
   return response;
 };
 
 // 이메일 복수 생성
-export const postEmails = async () => {
+/*export const postEmails = async () => {
   const response = await jsonAxios.get(`/api/send-bulk`);
+  return response;
+};*/
+
+// 이메일 조회
+/*export const getEmail = async () => {
+  const response = await jsonAxios.get(`/api/test`);
+  return response;
+};*/
+
+// 파일 조회
+export const getFiles = async () => {
+  const response = await jsonAxios.get(`/api/files/list`);
   return response;
 };
 
-// 이메일 조회
-export const getEmail = async () => {
-  const response = await jsonAxios.get(`/api/test`);
+// 파일 업로드
+export const postFiles = async () => {
+  const response = await jsonAxios.get(`/api/files/upload`);
   return response;
 };
 
