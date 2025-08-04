@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from .text_to_cal_json import text_to_cal_converter
 from core.config import settings
-from utils.user_token_manager import token_manager
+from utils.googleToken.user_token_manager import token_manager
 
 # 개발 환경에서 HTTPS 요구사항 우회 (프로덕션에서는 제거 필요)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'

@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from core.config import settings
-from utils.user_token_manager import token_manager
+from utils.googleToken.user_token_manager import token_manager
 import os
 import json
 from typing import Optional
