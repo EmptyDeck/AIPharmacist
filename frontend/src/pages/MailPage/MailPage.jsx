@@ -1,15 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as S from "./MailPage.style";
 import { LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
+import { postEmail } from "../../apis/apis";
 export default function MailPage() {
   const [email, setEmail] = useState("");
   const [summary, setSummary] = useState("");
+  const [patientName, setPatientName] = useState("김혜림");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     // 여기에 이메일 전송 로직 추가
-    alert(`이메일 전송: ${email}\n요약 내용:\n${summary}`);
+    const payload = {
+      recipient: email,
+      patient_name: patientName,
+      chat_history: summary,
+      doctor_name: "IBM_DoctorAI",
+    };
+
+    try {
+      const res = await postEmail(payload);
+      alert("이메일이 성공적으로 전송되었습니다!");
+    } catch (err) {
+      alert("이메일 전송에 실패했습니다.");
+      console.error(err);
+    }
   };
 
   return (
@@ -24,7 +39,7 @@ export default function MailPage() {
       </S.Header>
       <S.Container>
         <S.SummaryBox>
-          <h3>🧠 대화 요약</h3>
+          <h3>대화 요약</h3>
           <pre>{summary}</pre>
         </S.SummaryBox>
         <S.EmailForm onSubmit={handleSubmit}>
