@@ -81,6 +81,10 @@ yarn-error.log*
 .env.production
 .env.*.local
 
+# Google OAuth 토큰 파일들 (보안상 제외)
+user_tokens/
+*.json
+
 # 백업 파일
 *.bak
 *.backup

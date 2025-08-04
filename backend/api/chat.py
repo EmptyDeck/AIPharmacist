@@ -8,6 +8,12 @@ from ibm_watson_machine_learning.metanames import GenTextParamsMetaNames as GenP
 import asyncio
 from typing import Optional
 
+# AI 에이전트 임포트
+from api.chatbot.explainAI import explain_ai
+from api.chatbot.warnAI import warn_ai
+from api.chatbot.calendarAI import calendar_ai
+import uuid
+
 # APIRouter 인스턴스 생성
 router = APIRouter()
 
@@ -65,11 +71,49 @@ def get_medical_completion(prompt: str) -> str:
             status_code=500, detail=f"IBM Watson 모델 오류: {str(e)}")
 
 
+def classify_user_input(query: str) -> str:
+    """사용자 입력을 분류하여 적절한 AI 에이전트를 선택합니다"""
+    query_lower = query.lower()
+    
+    # 경고/부작용 관련 키워드
+    warn_keywords = [
+        '부작용', '위험', '주의', '경고', '안전', '금기', '독성', '과량',
+        '응급', '알레르기', '상호작용', '임신', '수유', '간독성', '신독성'
+    ]
+    
+    # 약물 설명 관련 키워드  
+    explain_keywords = [
+        '효과', '효능', '작용', '성분', '원리', '어떻게', '왜', '설명',
+        '무엇', '약', '성분', '기전', '치료', '개선', '완화'
+    ]
+    
+    # 캘린더 관련 키워드
+    calendar_keywords = [
+        '일정', '캘린더', '알림', '스케줄', '추가', '등록', '복용',
+        '먹어', '드세요', '아침', '점심', '저녁', '식전', '식후', '하루'
+    ]
+    
+    # 우선순위: 캘린더 > 경고 > 설명 > 일반
+    if any(keyword in query_lower for keyword in calendar_keywords):
+        return "add_cal"
+    elif any(keyword in query_lower for keyword in warn_keywords):
+        return "warn"
+    elif any(keyword in query_lower for keyword in explain_keywords):
+        return "explain"
+    else:
+        return "general"
+
+
 @router.post("/chat", summary="의료 AI 채팅")
 async def get_chat_response(request: ChatRequest):
-    """프론트엔드 요청을 IBM Watson 모델로 직접 전송하고 응답을 반환합니다."""
+    """프론트엔드 요청을 적절한 AI 에이전트로 라우팅하여 응답을 반환합니다."""
 
     # 사용자 컨텍스트 구성
+    user_context_dict = {
+        'underlying_diseases': request.underlying_diseases,
+        'currentMedications': request.currentMedications
+    }
+    
     user_context = []
     if request.underlying_diseases:
         user_context.append(f"기저질환: {', '.join(request.underlying_diseases)}")
@@ -79,6 +123,12 @@ async def get_chat_response(request: ChatRequest):
 
     context_text = " | ".join(
         user_context) if user_context else "특별한 기저질환이나 복용 약물 없음"
+    
+    # 사용자 입력 분류
+    agent_type = classify_user_input(request.question)
+    
+    # 세션 ID 생성 (캘린더 AI용)
+    session_id = str(uuid.uuid4())
 
     # 의료 전용 프롬프트 구성
     medical_prompt = f"""
@@ -99,17 +149,54 @@ async def get_chat_response(request: ChatRequest):
 """
 
     try:
-        # IBM Watson 모델 호출 (비동기 처리)
-        loop = asyncio.get_event_loop()
-        watson_response = await loop.run_in_executor(
-            None,
-            get_medical_completion,
-            medical_prompt
-        )
+        # AI 에이전트별 처리
+        if agent_type == "explain":
+            # 약물 설명 AI
+            loop = asyncio.get_event_loop()
+            agent_response = await loop.run_in_executor(
+                None,
+                explain_ai.explain_medication,
+                request.question,
+                user_context_dict
+            )
+            agent_name = "ExplainAI"
+            
+        elif agent_type == "warn":
+            # 경고/안전 AI
+            loop = asyncio.get_event_loop()
+            agent_response = await loop.run_in_executor(
+                None,
+                warn_ai.check_safety_warnings,
+                request.question,
+                user_context_dict
+            )
+            agent_name = "WarnAI"
+            
+        elif agent_type == "add_cal":
+            # 캘린더 AI
+            loop = asyncio.get_event_loop()
+            agent_response = await loop.run_in_executor(
+                None,
+                calendar_ai.handle_calendar_request,
+                request.question,
+                session_id,
+                user_context_dict
+            )
+            agent_name = "CalendarAI"
+            
+        else:
+            # 일반 의료 상담 (기존 로직)
+            loop = asyncio.get_event_loop()
+            agent_response = await loop.run_in_executor(
+                None,
+                get_medical_completion,
+                medical_prompt
+            )
+            agent_name = "GeneralAI"
 
         # 성공 응답 반환
         return {
-            "answer": watson_response.strip(),
+            "answer": agent_response.strip(),
             "user_context": {
                 "underlying_diseases": request.underlying_diseases,
                 "medications": request.currentMedications
@@ -117,6 +204,9 @@ async def get_chat_response(request: ChatRequest):
             "model_metadata": {
                 "model_name": "IBM Granite 3.3 8B Instruct",
                 "model_provider": "IBM Watson",
+                "agent_used": agent_name,
+                "agent_type": agent_type,
+                "session_id": session_id if agent_type == "add_cal" else None,
                 "context_provided": bool(user_context),
                 "disclaimer": "이는 일반적인 건강 정보이며, 전문 의료진의 진료를 대체할 수 없습니다."
             },

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import chat, auth, email, file_upload
+from api import chat, auth, email, file_upload, calendar, google_auth, google_auth_with_userinfo
 
 # FastAPI 앱 인스턴스 생성
 app = FastAPI(title="Dr.Watson Backend API", version="1.0.0")
@@ -42,6 +42,9 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(email.router, prefix="/api", tags=["Email"])
 app.include_router(file_upload.router, prefix="/api/files",
                    tags=["File Upload"])
+app.include_router(calendar.router, prefix="/api/calendar", tags=["Calendar"])
+app.include_router(google_auth.router, prefix="/auth", tags=["Google Auth"])
+app.include_router(google_auth_with_userinfo.router, prefix="/auth", tags=["Google Auth User Info"])
 
 
 @app.get("/")
