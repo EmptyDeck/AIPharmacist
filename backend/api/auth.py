@@ -78,7 +78,7 @@ async def callback(request: Request):
     
     # state가 store에 없을 경우 경고 로그만 출력 (개발용)
     if state not in state_store:
-        print(f"⚠️  Warning: State {state} not found in store. This may happen after server restart.")
+        print(f"Warning: State {state} not found in store. This may happen after server restart.")
         # 개발 환경에서는 계속 진행
         # raise HTTPException(status_code=400, detail="Invalid state parameter")
     
