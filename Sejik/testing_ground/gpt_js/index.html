@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>텍스트 요약기</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        textarea { width: 100%; height: 200px; }
+        button { margin-top: 10px; padding: 10px; }
+        #result { margin-top: 20px; border: 1px solid #ccc; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>텍스트 요약기</h1>
+    <p>아래에 요약할 텍스트를 입력하세요. 버튼을 누르면 IBM Granite 모델을 호출하여 한 문장으로 요약합니다.</p>
+    
+    <textarea id="inputText" placeholder="여기에 텍스트를 입력하세요...">
+You should express what you want a model to do by providing instructions that are as clear and specific as you can possibly make them.
+This will guide the model towards the desired output, and reduce the chances of receiving irrelevant or incorrect responses.
+Don't confuse writing a clear prompt with writing a short prompt.
+In many cases, longer prompts provide more clarity and context for the model, which can lead to more detailed and relevant outputs.
+    </textarea>
+    
+    <button onclick="summarizeText()">요약하기</button>
+    
+    <div id="result">결과가 여기에 표시됩니다.</div>
+
+    <script>
+        async function summarizeText() {
+            const inputText = document.getElementById('inputText').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!inputText) {
+                resultDiv.innerText = '입력 텍스트가 없습니다.';
+                return;
+            }
+            
+            // 프롬프트 구성 (Python 코드와 동일)
+            const prompt = `
+Summarize the text delimited by triple backticks into a single sentence.
+\`\`\`${inputText}\`\`\`
+            `;
+            
+            // IBM Watson ML API 설정 (사용자 환경에 맞게 수정하세요)
+            const apiKey = 'Q07iDID0ogWVEBA_cDtcEshvkcyqwF5HIzV75YOID-K8';  // IBM Cloud API 키 입력
+            const projectId = 'ca4ab8b0-0c39-4985-9400-2df348bbf894';  // 프로젝트 ID 입력
+            const ibmCloudUrl = 'https://us-south.ml.cloud.ibm.com';  // 지역에 맞게 조정 (예: us-south)
+            const modelId = 'meta-llama/llama-3-3-70b-instruct';
+            
+            // Bearer 토큰 생성 (API 키로 토큰을 얻는 엔드포인트 호출 - 실제로는 별도 호출 필요)
+            // 주의: 클라이언트 측에서 토큰을 생성하려면 IBM IAM 엔드포인트를 호출해야 함. 여기서는 간단히 가정.
+            let accessToken;
+            try {
+                const tokenResponse = await fetch(`${ibmCloudUrl}/ml/v1-beta/generation/text?version=2023-05-29`, {  // 실제 토큰 엔드포인트 아님; IAM으로 대체 필요
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Basic ${btoa(`apikey:${apiKey}`)}`  // 기본 인증 (주의: 보안 취약)
+                    },
+                    body: JSON.stringify({ grant_type: 'urn:ibm:params:oauth:grant-type:apikey', apikey: apiKey })
+                });
+                const tokenData = await tokenResponse.json();
+                accessToken = tokenData.access_token;
+            } catch (error) {
+                console.error('토큰 생성 오류:', error);
+                resultDiv.innerText = 'API 토큰 생성에 실패했습니다. 콘솔을 확인하세요.';
+                return;
+            }
+            
+            // 모델 호출
+            try {
+                const response = await fetch(`${ibmCloudUrl}/ml/v1-beta/generation/text?version=2023-05-29`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
+                        'IBM-Project-ID': projectId
+                    },
+                    body: JSON.stringify({
+                        model_id: modelId,
+                        input: prompt,
+                        parameters: {
+                            max_new_tokens: 200,
+                            temperature: 0.7
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP 오류: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const summary = data.results[0].generated_text;  // 응답 구조에 맞게 추출
+                resultDiv.innerText = summary;
+            } catch (error) {
+                console.error('API 호출 오류:', error);
+                resultDiv.innerText = '요약에 실패했습니다. API 키나 프로젝트 ID를 확인하세요.';
+            }
+        }
+    </script>
+</body>
+</html>

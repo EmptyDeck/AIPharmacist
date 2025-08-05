@@ -178,3 +178,31 @@ export const FileUpload = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
 `;
+
+
+
+
+
+
+//세직
+// 음성 상태 메시지 스타일
+export const VoiceStatusMessage = styled.div`
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin: 8px 0;
+  text-align: center;
+  font-size: 14px;
+  border: 1px solid #bbdefb;
+  font-style: italic;
+`;
+
+// 펄스 애니메이션 추가 (전역 스타일이나 별도 CSS 파일에)
+const pulseAnimation = `
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+`;
