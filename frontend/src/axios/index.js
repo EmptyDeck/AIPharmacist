@@ -10,3 +10,10 @@ export const jsonAxios = axios.create({
   withCredentials: false,
 });
 
+export const formDataAxios = axios.create({
+  baseURL: process.env.REACT_APP_SERVER_DOMAIN,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'multipart/form-data',
+  },
+});
