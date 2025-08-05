@@ -31,7 +31,7 @@ export default function MailPage() {
     <>
       <S.Header>
         Dr. Watson
-        <Link to={`/`}>
+        <Link to={`/chat`}>
           <div title="챗으로 돌아가기">
             <LogOut style={{ cursor: "pointer" }} />
           </div>
