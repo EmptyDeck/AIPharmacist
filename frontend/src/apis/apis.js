@@ -1,4 +1,4 @@
-import { jsonAxios } from "../axios";
+import { jsonAxios, formDataAxios } from "../axios";
 
 // 채팅 생성
 export const postChat = async (userMessage) => {
@@ -11,21 +11,15 @@ export const postChat = async (userMessage) => {
   return response.data;
 };
 
-// 채팅 서비스 상태 조회
-export const getHealth = async () => {
-  const response = await jsonAxios.get(`/api/health`);
-  return response;
-};
-
-// 네이버 로그인 조회
+// 구글 로그인 조회
 export const getLogin = async () => {
-  const response = await jsonAxios.get(`/auth/login`);
+  const response = await jsonAxios.get(`/auth/google/login-enhanced`);
   return response;
 };
 
-// 네이버 로그인 콜백
+// 구글 로그인 콜백
 export const getCallback = async () => {
-  const response = await jsonAxios.get(`/auth/callback`);
+  const response = await jsonAxios.get(`/auth/google/callback-enhanced`);
   return response;
 };
 
@@ -35,32 +29,11 @@ export const postEmail = async (data) => {
   return response;
 };
 
-// 이메일 복수 생성
-/*export const postEmails = async () => {
-  const response = await jsonAxios.get(`/api/send-bulk`);
-  return response;
-};*/
-
-// 이메일 조회
-/*export const getEmail = async () => {
-  const response = await jsonAxios.get(`/api/test`);
-  return response;
-};*/
-
-// 파일 조회
-export const getFiles = async () => {
-  const response = await jsonAxios.get(`/api/files/list`);
-  return response;
-};
-
 // 파일 업로드
-export const postFiles = async () => {
-  const response = await jsonAxios.get(`/api/files/upload`);
-  return response;
-};
+export const postFiles = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
 
-// 디폴트 상태
-export const getDefault = async () => {
-  const response = await jsonAxios.get(`/`);
-  return response;
+  const response = await formDataAxios.post(`/api/files/upload`, formData, {});
+  return response.data;
 };

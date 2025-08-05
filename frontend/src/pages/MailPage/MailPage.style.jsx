@@ -1,4 +1,4 @@
-import styled, { css, keyframes } from "styled-components";
+import styled from "styled-components";
 export const Header = styled.header`
   height: 60px;
   display: flex;
@@ -35,7 +35,8 @@ export const EmailForm = styled.form`
   display: flex;
   gap: 10px;
   align-items: center;
-  width: 300px;
+  width: 360px;
+  flex-direction: column; 
 `;
 
 export const EmailInput = styled.input`
