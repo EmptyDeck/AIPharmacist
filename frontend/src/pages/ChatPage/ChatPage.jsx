@@ -4,6 +4,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import * as S from "./ChatPage.style";
 import { Send, FileUp, Mail, Mic, CircleUserRound } from "lucide-react";
 import { postChat, getHealth, getLogin, getCallback } from "../../apis/apis";
+import ReactMarkdown from "react-markdown";
+
 const commonConditions = [
   "당뇨병",
   "고혈압",
@@ -204,7 +206,11 @@ export default function ChatPage() {
           {messages.map((message) => (
             <S.MessageBubble key={message.id} $isUser={message.type === "user"}>
               <S.MessageContent $isUser={message.type === "user"}>
-                {message.content}
+                {message.type === "bot" ? (
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                ) : (
+                  message.content
+                )}
               </S.MessageContent>
               <S.Timestamp $isUser={message.type === "user"}>
                 {message.timestamp.toLocaleTimeString()}
