@@ -1,10 +1,26 @@
 version: '3.8'
 
 services:
+  backend:
+    build: .
+    container_name: doctor_ai_backend
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./user_tokens:/app/user_tokens
+      - ./.env:/app/.env:ro
+    environment:
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - doctor_ai_network
+    restart: unless-stopped
+
   mysql:
     image: mysql:8.0
     container_name: doctor_ai_mysql
-    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -14,24 +30,14 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - doctor_ai_network
-
-  backend:
-    build: .
-    container_name: doctor_ai_backend
-    restart: unless-stopped
-    ports:
-      - "8001:8000"
-    environment:
-      - DATABASE_URL=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
-    depends_on:
-      - mysql
-    volumes:
-      - ./.env:/app/.env:ro
-      - ./user_tokens:/app/user_tokens
-    networks:
-      - doctor_ai_network
+    restart: always
 
 volumes:
   mysql_data:
