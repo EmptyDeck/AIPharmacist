@@ -6,7 +6,7 @@ import { postEmail } from "../../apis/apis";
 export default function MailPage() {
   const [email, setEmail] = useState("");
   const [summary, setSummary] = useState("");
-  const [patientName, setPatientName] = useState("김혜림");
+  const [patientName, setPatientName] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,6 +26,14 @@ export default function MailPage() {
       console.error(err);
     }
   };
+  useEffect(() => {
+    const summaryFromStorage = sessionStorage.getItem("chatSummary");
+    const userNameFromParams = new URLSearchParams(window.location.search).get(
+      "user_name"
+    );
+    setSummary(summaryFromStorage || "");
+    setPatientName(userNameFromParams || "");
+  }, []);
 
   return (
     <>
@@ -44,12 +52,19 @@ export default function MailPage() {
         </S.SummaryBox>
         <S.EmailForm onSubmit={handleSubmit}>
           <S.EmailInput
+            type="name"
+            placeholder="성함을 입력하세요"
+            value={patientName}
+            onChange={(e) => setPatientName(e.target.value)}
+          />
+          <S.EmailInput
             type="email"
             placeholder="이메일 주소를 입력하세요"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <S.SendButton type="submit">보내기</S.SendButton>
+
+          <S.SendButton type="submit">전송</S.SendButton>
         </S.EmailForm>
       </S.Container>
     </>

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import * as S from "./ChatPage.style";
 import { Send, FileUp, Mail, Mic, CircleUserRound } from "lucide-react";
-import { postChat, getHealth, getLogin, getCallback } from "../../apis/apis";
+import { postChat, postFiles } from "../../apis/apis";
 import ReactMarkdown from "react-markdown";
 
 const commonConditions = [
@@ -121,29 +121,6 @@ export default function ChatPage() {
     }
   };
 
-  /*const simulateAPICall = async (message) => {
-    await new Promise((r) => setTimeout(r, 1000));
-    if (
-      message.content.includes("당뇨") ||
-      message.medications.includes("메트포르민")
-    ) {
-      return {
-        answer: "당뇨병 관련 정보입니다.",
-        confidence_score: 0.95,
-        safety_warnings: [],
-        drug_interactions: [],
-        references: [],
-      };
-    }
-    return {
-      answer: "해당 정보를 찾을 수 없습니다.",
-      confidence_score: 0.6,
-      safety_warnings: ["개인차가 있으므로 전문가 상담 필요"],
-      drug_interactions: [],
-      references: [],
-    };
-  };*/
-
   const toggleCondition = (condition) => {
     setSelectedConditions((prev) =>
       prev.includes(condition)
@@ -163,13 +140,40 @@ export default function ChatPage() {
     fileInputRef.current.click();
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      setUploadedFileName(file.name);
-      setSelectedFile(file);
+    if (!file) return;
+
+    setUploadedFileName(file.name);
+    setSelectedFile(file);
+
+    try {
+      const res = await postFiles(file);
+      console.log("파일 업로드 결과:", res);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          type: "bot",
+          content: `파일이 성공적으로 업로드되었습니다: ${file.name}`,
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (err) {
+      console.error("파일 업로드 실패:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          type: "bot",
+          content: "파일 업로드 중 오류가 발생했습니다.",
+          isError: true,
+          timestamp: new Date(),
+        },
+      ]);
     }
   };
+
   useEffect(() => {
     const authSuccess = searchParams.get("auth_success");
     const id = searchParams.get("user_id");
@@ -179,11 +183,15 @@ export default function ChatPage() {
       setUserId(id);
       setUserName(name);
       setIsAuthenticated(true);
-      // 필요하면 로컬스토리지 등에도 저장
-      // localStorage.setItem('userId', id);
-      // localStorage.setItem('userName', name);
     }
   }, [searchParams]);
+  useEffect(() => {
+    const summary = messages
+      .map((msg) => `${msg.type === "user" ? "user" : "AI"}: ${msg.content}`)
+      .join("\n");
+
+    sessionStorage.setItem("chatSummary", summary);
+  }, [messages]);
 
   return (
     <S.PageWrapper>
@@ -252,13 +260,6 @@ export default function ChatPage() {
             </div>
           </S.SelectContainer>
           {uploadedFileName && <S.FileUpload> {uploadedFileName}</S.FileUpload>}
-          {showDocumentInput && (
-            <S.TextArea
-              placeholder="의료 문서를 입력하세요..."
-              value={medicalDocument}
-              onChange={(e) => setMedicalDocument(e.target.value)}
-            />
-          )}
 
           <S.MessageInputContainer>
             <S.SendButton>
