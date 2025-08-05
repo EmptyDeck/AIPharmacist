@@ -39,6 +39,22 @@ services:
       - doctor_ai_network
     restart: always
 
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: doctor_ai_ngrok
+    restart: unless-stopped
+    command:
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    ports:
+      - "4040:4040"
+    networks:
+      - doctor_ai_network
+
 volumes:
   mysql_data:
 
