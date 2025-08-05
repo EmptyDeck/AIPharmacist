@@ -24,7 +24,7 @@ SCOPES = [
     'openid',
     'https://www.googleapis.com/auth/calendar.events'
 ]
-REDIRECT_URI = "http://localhost:8001/auth/google/callback-enhanced"
+REDIRECT_URI = "https://f5f1214c4483.ngrok-free.app/auth/google/callback-enhanced"
 
 def get_google_oauth_flow():
     """Google OAuth Flow 생성 (사용자 정보 포함)"""
