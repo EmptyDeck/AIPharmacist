@@ -178,3 +178,8 @@ export const FileUpload = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
 `;
+
+export const IconBox = styled.div`
+  display: flex;
+  gap: 12px;
+`;
