@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     GOOGLE_TOKEN_URI: str = "https://oauth2.googleapis.com/token" 
     GOOGLE_AUTH_PROVIDER_X509_CERT_URL: str = "https://www.googleapis.com/oauth2/v1/certs"
     GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URIS: str = "http://3.27.201.191"
+    GOOGLE_REDIRECT_URIS: str = "http://3.34.3.40"
     
     # Database 설정
     DATABASE_URL: str = "mysql+pymysql://ibm.doctor-user:ibm.doctor-pass@localhost:3306/ibm.doctor-db"
