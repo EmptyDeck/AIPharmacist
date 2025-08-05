@@ -63,6 +63,15 @@ try:
 except Exception as e:
     print(f"❌ File Upload 라우터 등록 실패: {e}")
 
+
+from api.audio import stt, tts
+from api.audio import gpt
+app.include_router(stt.router, prefix="/api", tags=["STT"])
+app.include_router(tts.router, prefix="/api", tags=["TTS"])
+app.include_router(gpt.router, prefix="/api")
+
+
+
 @app.get("/")
 def root():
     return {"message": "Dr.watson Backend Server", "status": "running"}
