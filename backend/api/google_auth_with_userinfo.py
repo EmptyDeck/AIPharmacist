@@ -24,7 +24,7 @@ SCOPES = [
     'openid',
     'https://www.googleapis.com/auth/calendar.events'
 ]
-REDIRECT_URI = "http://3.27.201.191:8001/auth/google/callback-enhanced"
+REDIRECT_URI = "http://3.34.3.40:8001/auth/google/callback-enhanced"
 
 def get_google_oauth_flow():
     """Google OAuth Flow 생성 (사용자 정보 포함)"""
