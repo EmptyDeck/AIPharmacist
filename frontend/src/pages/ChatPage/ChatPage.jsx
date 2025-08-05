@@ -1,8 +1,8 @@
 // ChatPage.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import * as S from "./ChatPage.style";
-import { Send, FileUp, Mail, Mic } from "lucide-react";
+import { Send, FileUp, Mail, Mic, CircleUserRound } from "lucide-react";
 import { postChat, getHealth, getLogin, getCallback } from "../../apis/apis";
 const commonConditions = [
   "당뇨병",
@@ -43,6 +43,10 @@ export default function ChatPage() {
   const fileInputRef = useRef(null);
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [searchParams] = useSearchParams();
+  const [userId, setUserId] = useState(null);
+  const [userName, setUserName] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     setMessages([
@@ -164,16 +168,35 @@ export default function ChatPage() {
       setSelectedFile(file);
     }
   };
+  useEffect(() => {
+    const authSuccess = searchParams.get("auth_success");
+    const id = searchParams.get("user_id");
+    const name = searchParams.get("user_name");
+
+    if (authSuccess === "true" && id) {
+      setUserId(id);
+      setUserName(name);
+      setIsAuthenticated(true);
+      // 필요하면 로컬스토리지 등에도 저장
+      // localStorage.setItem('userId', id);
+      // localStorage.setItem('userName', name);
+    }
+  }, [searchParams]);
 
   return (
     <S.PageWrapper>
       <S.Header>
         Dr. Watson
-        <Link to={`/mail`}>
-          <div title="대화 내용 메일로 전송">
-            <Mail style={{ cursor: "pointer" }} />
-          </div>
-        </Link>
+        <S.IconBox>
+          <Link to={`/mail`}>
+            <div title="대화 내용 메일로 전송">
+              <Mail style={{ cursor: "pointer" }} />
+            </div>
+          </Link>
+          <Link to={`/login`}>
+            <CircleUserRound />
+          </Link>
+        </S.IconBox>
       </S.Header>
 
       <S.ChatContainer>
