@@ -1,16 +1,13 @@
 // ChatPage.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import * as S from "./ChatPage.style";
-
-//추가
-import { Send, FileUp, Mail, Mic, MicOff } from "lucide-react";  // MicOff 추가
-import { useVoiceRecorder } from './hooks/useVoiceRecorder';
-import { useAudioProcessor } from './hooks/useAudioProcessor';
-import { useSpeechAPI } from './hooks/useSpeechAPI';
-//
-
+import { Send, FileUp, Mail, Mic, CircleUserRound } from "lucide-react";
 import { postChat, getHealth, getLogin, getCallback } from "../../apis/apis";
+import ReactMarkdown from "react-markdown";
+
+import { useVoiceConversation } from "./hooks/useVoiceConversation"; // sejik
+
 
 const commonConditions = [
   "당뇨병",
@@ -51,31 +48,51 @@ export default function ChatPage() {
   const fileInputRef = useRef(null);
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [searchParams] = useSearchParams();
+  const [userId, setUserId] = useState(null);
+  const [userName, setUserName] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // 음성 관련 상태들
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState("");
-  const {
-    isRecording,
-    audioLevel,
-    startRecording,
-    stopRecording,
-    forceStop,
-    setOnRecordingComplete
-  } = useVoiceRecorder();
+  const [isAutoVoiceMode, setIsAutoVoiceMode] = useState(false);
+  const { isRecording, toggleRecording } = useVoiceConversation({
+      apiBaseUrl: "http://localhost:8001", // 실제 주소 맞게 변경하세요
+      autoStart: true,
+      onUserMessage: (text) => {
+        if (!text.trim()) return;
+        const userMessage = {
+          id: Date.now().toString(),
+          type: "user",
+          content: text,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+      },
+      onBotMessage: (text) => {
+        if (!text.trim()) return;
+        const botMessage = {
+          id: (Date.now() + 1).toString(),
+          type: "bot",
+          content: text,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, botMessage]);
+      },
+    });
 
-  const {
-    isProcessing,
-    isSpeaking,
-    preprocessAudio,
-    playTTSAudio,
-    stopAudio
-  } = useAudioProcessor();
-  const {
-  processVoiceMessage,
-  isAnyLoading  // STT/TTS/LLM 로딩 상태
-  } = useSpeechAPI();  
-  // -세직
+    // 자동 음성 대화 토글 핸들러
+    const handleToggleAutoVoice = () => {
+      if (isAutoVoiceMode) {
+        // 모드 끄기 => 녹음 종료
+        if (isRecording) toggleRecording();
+        setIsAutoVoiceMode(false);
+      } else {
+        // 모드 켜기 => 녹음 시작
+        if (!isRecording) toggleRecording();
+        setIsAutoVoiceMode(true);
+      }
+    };
+
+
 
 
   useEffect(() => {
@@ -93,93 +110,6 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // 녹음 완료 콜백 설정 (useEffect로 한 번만)
-  useEffect(() => {
-  if (isVoiceMode) {
-    if (isAnyLoading) {
-      setVoiceStatus("음성을 처리 중입니다...");
-    } else if (isRecording) {
-      setVoiceStatus("듣고 있습니다...");
-    } else if (isSpeaking) {
-      setVoiceStatus("응답을 재생 중입니다...");
-    } else {
-      setVoiceStatus("음성 모드가 활성화되었습니다. 말씀해주세요.");
-    }
-  }
-  }, [isVoiceMode, isAnyLoading, isRecording, isSpeaking]);  // 의존성: 상태 변화 시 업데이트
-  
-  useEffect(() => {
-  setOnRecordingComplete(async (audioBlob) => {
-    try {
-      // 1. 오디오 전처리
-      const processedAudio = await preprocessAudio(audioBlob);
-      
-      // 2. 전체 파이프라인 (STT → LLM → TTS)
-      const result = await processVoiceMessage(processedAudio.blob, {
-        conditions: selectedConditions,
-        medications: selectedMedications,
-      });
-      
-      if (result.success) {
-        // UI 업데이트: 사용자 메시지와 봇 응답 추가
-        const userMessage = {
-          id: Date.now().toString(),
-          type: "user",
-          content: result.userText || "음성 입력",  // STT 결과가 없으면 대체 텍스트
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, userMessage]);
-        
-        const botMessage = {
-          id: (Date.now() + 1).toString(),
-          type: "bot",
-          content: result.aiText || "응답을 생성할 수 없습니다.",  // LLM 결과가 없으면 대체
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, botMessage]);
-        
-        // 3. TTS 재생
-        await playTTSAudio(result.audioBlob);
-      } else {
-        setVoiceStatus(`음성 처리 실패: ${result.error || "알 수 없는 오류"}`);
-      }
-    } catch (error) {
-      console.error("녹음 후 처리 실패:", error);
-      setVoiceStatus("오류 발생: 다시 시도해주세요.");
-    } finally {
-      // 다음 녹음 준비
-      if (isVoiceMode && !isAnyLoading) {  // 로딩 중이 아니면 재시작
-        startRecording();
-      }
-    }
-  });
-  }, [setOnRecordingComplete, preprocessAudio, processVoiceMessage, playTTSAudio, isVoiceMode, selectedConditions, selectedMedications]);
-
-  const handleVoiceToggle = async () => {
-  if (!isVoiceMode) {
-    try {
-      const success = await startRecording();
-      if (success) {
-        setIsVoiceMode(true);
-        // voiceStatus는 위 useEffect에서 자동 업데이트됨
-      } else {
-        setVoiceStatus("마이크 권한이 필요하거나 시작에 실패했습니다.");
-      }
-    } catch (error) {
-      console.error("음성 모드 시작 실패:", error);
-      setVoiceStatus("마이크 권한이 필요합니다. 브라우저 설정을 확인하세요.");
-    }
-  } else {
-    forceStop();
-    stopAudio();
-    setIsVoiceMode(false);
-    setVoiceStatus("");  // 즉시 초기화
-    }
-  };
-  //////// 세직
-
-
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() && !medicalDocument.trim() && !selectedFile)
@@ -236,6 +166,29 @@ export default function ChatPage() {
     }
   };
 
+  /*const simulateAPICall = async (message) => {
+    await new Promise((r) => setTimeout(r, 1000));
+    if (
+      message.content.includes("당뇨") ||
+      message.medications.includes("메트포르민")
+    ) {
+      return {
+        answer: "당뇨병 관련 정보입니다.",
+        confidence_score: 0.95,
+        safety_warnings: [],
+        drug_interactions: [],
+        references: [],
+      };
+    }
+    return {
+      answer: "해당 정보를 찾을 수 없습니다.",
+      confidence_score: 0.6,
+      safety_warnings: ["개인차가 있으므로 전문가 상담 필요"],
+      drug_interactions: [],
+      references: [],
+    };
+  };*/
+
   const toggleCondition = (condition) => {
     setSelectedConditions((prev) =>
       prev.includes(condition)
@@ -251,7 +204,6 @@ export default function ChatPage() {
         : [...prev, medication]
     );
   };
-
   const handleFileButtonClick = () => {
     fileInputRef.current.click();
   };
@@ -263,24 +215,68 @@ export default function ChatPage() {
       setSelectedFile(file);
     }
   };
+  useEffect(() => {
+    const authSuccess = searchParams.get("auth_success");
+    const id = searchParams.get("user_id");
+    const name = searchParams.get("user_name");
+
+    if (authSuccess === "true" && id) {
+      setUserId(id);
+      setUserName(name);
+      setIsAuthenticated(true);
+      // 필요하면 로컬스토리지 등에도 저장
+      // localStorage.setItem('userId', id);
+      // localStorage.setItem('userName', name);
+    }
+  }, [searchParams]);
 
   return (
     <S.PageWrapper>
       <S.Header>
         Dr. Watson
-        <Link to={`/mail`}>
-          <div title="대화 내용 메일로 전송">
-            <Mail style={{ cursor: "pointer" }} />
-          </div>
-        </Link>
+        <S.IconBox>
+          <Link to={`/mail`}>
+            <div title="대화 내용 메일로 전송">
+              <Mail style={{ cursor: "pointer" }} />
+            </div>
+          </Link>
+          <Link to={`/login`}>
+            <CircleUserRound />
+          </Link>
+        </S.IconBox>
       </S.Header>
 
       <S.ChatContainer>
         <S.MessageList>
+
+        {/* 자동 음성 대화 토글 버튼 */}
+        <button
+          style={{
+            margin: "10px",
+            padding: "8px 12px",
+            backgroundColor: isAutoVoiceMode ? "#4caf50" : "#ccc",
+            color: isAutoVoiceMode ? "white" : "black",
+            borderRadius: "4px",
+            cursor: "pointer",
+            border: "none",
+          }}
+          onClick={handleToggleAutoVoice}
+        >
+          {isAutoVoiceMode ? "음성 대화 중지" : "음성 대화 시작"}
+        </button>
+
+
+
+
+          
           {messages.map((message) => (
             <S.MessageBubble key={message.id} $isUser={message.type === "user"}>
               <S.MessageContent $isUser={message.type === "user"}>
-                {message.content}
+                {message.type === "bot" ? (
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                ) : (
+                  message.content
+                )}
               </S.MessageContent>
               <S.Timestamp $isUser={message.type === "user"}>
                 {message.timestamp.toLocaleTimeString()}
@@ -288,15 +284,6 @@ export default function ChatPage() {
             </S.MessageBubble>
           ))}
           {isLoading && <S.Loading>답변 생성 중...</S.Loading>}
-          {isAnyLoading && <S.Loading>음성 처리 중...</S.Loading>}
-
-          {/* 음성 상태 표시 세직 */}
-          {voiceStatus && (
-            <S.VoiceStatusMessage>
-              {voiceStatus}
-            </S.VoiceStatusMessage>
-          )}
-
           <div ref={messagesEndRef} />
         </S.MessageList>
 
@@ -349,46 +336,19 @@ export default function ChatPage() {
               style={{ display: "none" }}
               onChange={handleFileChange}
             />
-            
             <S.InputWrapper>
               <S.Input
-                placeholder={isVoiceMode ? "음성 모드 활성화됨" : "질문을 입력하세요..."}
+                placeholder="질문을 입력하세요..."
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                disabled={isLoading || isVoiceMode}
+                disabled={isLoading}
               />
-              
-              {/* 음성 토글 버튼 */}
-              <div 
-                title={isVoiceMode ? "음성 모드 끄기" : "음성 모드 켜기"}
-                onClick={handleVoiceToggle}
-                style={{ 
-                  cursor: "pointer",
-                  color: isVoiceMode ? "#ff4444" : "#666",
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "4px"
-                }}
-              >
-                {isVoiceMode ? (
-                  <MicOff size={20} />  // 이제 import되어서 정상 작동
-                ) : (
-                  <Mic size={20} />
-                )}
-                {isRecording && (
-                  <div style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    backgroundColor: "#ff4444",
-                    marginLeft: "4px",
-                    animation: "pulse 1s infinite"
-                  }} />
-                )}
+              <div title="음성 입력">
+                <Mic style={{ cursor: "pointer" }} />
               </div>
             </S.InputWrapper>
-            <S.SendButton onClick={handleSendMessage} disabled={isLoading || isVoiceMode}>
+            <S.SendButton onClick={handleSendMessage} disabled={isLoading}>
               <Send size={18} />
               전송
             </S.SendButton>

@@ -39,6 +39,7 @@ services:
       - doctor_ai_network
     restart: always
 
+
 volumes:
   mysql_data:
 
