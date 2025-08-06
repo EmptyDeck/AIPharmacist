@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     WATSONX_API_KEY: str = ""  # IBM Cloud API Key
     WATSONX_PROJECT_ID: str = ""  # Watson Studio Project ID
     
+    # IBM Watson STT/TTS 설정
+    WATSON_STT_API_KEY: str = ""  # IBM Watson STT API Key
+    WATSON_STT_URL: str = "https://api.us-south.speech-to-text.watson.cloud.ibm.com"  # STT Service URL
+    WATSON_TTS_API_KEY: str = ""  # IBM Watson TTS API Key  
+    WATSON_TTS_URL: str = "https://api.us-south.text-to-speech.watson.cloud.ibm.com"  # TTS Service URL
+    
     # 이메일 설정 (네이버 SMTP)
     MAIL_USERNAME: str = ""  # 네이버 이메일
     MAIL_PASSWORD: str = ""  # 네이버 앱 패스워드

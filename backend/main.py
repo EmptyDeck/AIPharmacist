@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import chat, auth, email, file_upload, calendar, google_auth_with_userinfo, users
+from api import chat, auth, email, file_upload, calendar, google_auth_with_userinfo, users, voice
 from DB.database import create_tables
 
 # FastAPI 앱 인스턴스 생성
@@ -42,21 +42,21 @@ app.add_middleware(
 
 # API 라우터들을 포함시킴
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
-app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+# app.include_router(auth.router, prefix="/auth", tags=["Authentication"]) # 네이버 인증
 app.include_router(email.router, prefix="/api", tags=["Email"])
-app.include_router(file_upload.router, prefix="/api/files",
-                   tags=["File Upload"])
+app.include_router(file_upload.router, prefix="/api/files", tags=["File Upload"])
 app.include_router(calendar.router, prefix="/api/calendar", tags=["Calendar"])
-# app.include_router(google_auth.router, prefix="/auth", tags=["Google Auth"])
-app.include_router(google_auth_with_userinfo.router, prefix="/auth", tags=["Google Auth User Info"])
-app.include_router(users.router, prefix="/api", tags=["Users"])
+# app.include_router(google_auth.router, prefix="/auth", tags=["Google Auth"])  # 수동 사용자 관리
+app.include_router(google_auth_with_userinfo.router, prefix="/auth", tags=["Google Auth User Info"]) # 자동 사용자 관리(enhanced version)
+app.include_router(users.router, prefix="/api", tags=["User CRUD"])
+app.include_router(voice.router, prefix="/api", tags=["Voice"])
 
 
 @app.get("/")
 def root():
     return {"message": "Dr.watson Backend Server", "status": "running"}
 
-
+"""로컬 테스트용"""
 if __name__ == "__main__":
     import uvicorn
     print("Starting Dr.Watson Backend Server...")

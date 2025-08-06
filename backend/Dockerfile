@@ -8,13 +8,17 @@ LABEL description="Dr.Watson Backend API Server"
 # 작업 디렉토리 설정
 WORKDIR /app
 
-# 시스템 의존성 설치 (OCR을 위한 Tesseract 포함)
+# 시스템 의존성 설치 (OCR을 위한 Tesseract, MySQL 클라이언트, 오디오 처리 라이브러리 포함)
 RUN apt-get update && apt-get install -y \
     gcc \
+    default-libmysqlclient-dev \
+    pkg-config \
     tesseract-ocr \
     tesseract-ocr-kor \
     tesseract-ocr-eng \
     curl \
+    ffmpeg \
+    libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 의존성 파일 복사

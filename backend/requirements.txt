@@ -54,3 +54,8 @@ google-api-python-client==2.148.0
 pytz==2023.3
 python-dateutil==2.9.0
 
+# Voice Processing Dependencies
+ibm-watson==8.1.0
+pydub==0.25.1
+python-magic==0.4.27
+
