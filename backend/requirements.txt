@@ -36,7 +36,6 @@ typing_extensions==4.14.1
 uvicorn==0.35.0
 watchfiles==1.1.0
 websockets==15.0.1
-requests==2.31.0
 
 # IBM Watson Machine Learning SDK
 ibm-watson-machine-learning==1.0.368
@@ -58,4 +57,7 @@ python-dateutil==2.9.0
 ibm-watson==8.1.0
 pydub==0.25.1
 python-magic==0.4.27
+
+# HTTP Client (replaced requests for better UTF-8 handling)
+# httpx==0.28.1 (already included above)
 
