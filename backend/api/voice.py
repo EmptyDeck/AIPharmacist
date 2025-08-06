@@ -1,5 +1,7 @@
 import os
 import tempfile
+import requests
+import base64
 try:
     import magic
     MAGIC_AVAILABLE = True
@@ -190,16 +192,38 @@ async def speech_to_text(
         
         watson_content_type = content_type_mapping.get(original_type, 'audio/wav')
         
-        # 음성 인식 실행 (원본 파일 그대로 사용)
+        # REST API 직접 호출로 STT 처리
+        def direct_stt_call():
+            # Watson STT REST API 엔드포인트
+            stt_url = f"{settings.WATSON_STT_URL}/v1/recognize"
+            
+            # Basic 인증 헤더 생성
+            auth_string = f"apikey:{settings.WATSON_STT_API_KEY}"
+            auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
+            
+            headers = {
+                'Authorization': f'Basic {auth_b64}',
+                'Content-Type': watson_content_type
+            }
+            
+            params = {
+                'model': model
+            }
+            
+            response = requests.post(
+                stt_url, 
+                headers=headers, 
+                params=params,
+                data=file_content,  # 바이너리 오디오 데이터
+                timeout=60
+            )
+            response.raise_for_status()
+            
+            return response.json()
+        
+        # 음성 인식 실행
         loop = asyncio.get_event_loop()
-        recognition_result = await loop.run_in_executor(
-            None,
-            lambda: stt_service.recognize(
-                audio=io.BytesIO(file_content),  # 원본 파일 사용
-                content_type=watson_content_type,
-                model=model
-            ).get_result()
-        )
+        recognition_result = await loop.run_in_executor(None, direct_stt_call)
         
         # 결과 처리
         if not recognition_result.get('results'):
@@ -295,30 +319,37 @@ async def text_to_speech(
         # 음성 합성 실행
         loop = asyncio.get_event_loop()
         
-        # 한국어 텍스트 처리 - URL 인코딩 방식
-        import urllib.parse
+        # REST API 직접 호출로 UTF-8 인코딩 문제 해결
+        def direct_tts_call():
+            # Watson TTS REST API 엔드포인트
+            tts_url = f"{settings.WATSON_TTS_URL}/v1/synthesize"
+            
+            # Basic 인증 헤더 생성
+            auth_string = f"apikey:{settings.WATSON_TTS_API_KEY}"
+            auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
+            
+            headers = {
+                'Content-Type': 'application/json; charset=utf-8',  # UTF-8 명시
+                'Accept': f'audio/{audio_format}',
+                'Authorization': f'Basic {auth_b64}'
+            }
+            
+            data = {
+                'text': text,
+                'voice': voice
+            }
+            
+            response = requests.post(tts_url, headers=headers, json=data, timeout=30)
+            response.raise_for_status()
+            
+            # Watson SDK 호환을 위한 응답 객체
+            class TTSResponse:
+                def __init__(self, content):
+                    self.content = content
+            
+            return TTSResponse(response.content)
         
-        def safe_synthesize():
-            try:
-                return tts_service.synthesize(
-                    text=text,
-                    voice=voice,
-                    accept=f'audio/{audio_format}'
-                ).get_result()
-            except Exception as e:
-                # 인코딩 오류 시 텍스트를 ASCII로 변환 후 재시도
-                if 'latin-1' in str(e) or 'codec' in str(e):
-                    # 한국어를 영어로 임시 대체
-                    fallback_text = "Hello, this is a medical AI assistant."
-                    return tts_service.synthesize(
-                        text=fallback_text,
-                        voice=voice,
-                        accept=f'audio/{audio_format}'
-                    ).get_result()
-                else:
-                    raise e
-        
-        synthesis_result = await loop.run_in_executor(None, safe_synthesize)
+        synthesis_result = await loop.run_in_executor(None, direct_tts_call)
         
         # 오디오 데이터 추출
         audio_content = synthesis_result.content
@@ -381,17 +412,39 @@ async def voice_chat(
         }
         watson_content_type = content_type_mapping.get(original_type, 'audio/wav')
         
-        stt_service = get_stt_service()
+        # REST API 직접 호출로 STT 처리
+        def direct_stt_call_chat():
+            # Watson STT REST API 엔드포인트
+            stt_url = f"{settings.WATSON_STT_URL}/v1/recognize"
+            
+            # Basic 인증 헤더 생성
+            auth_string = f"apikey:{settings.WATSON_STT_API_KEY}"
+            auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
+            
+            headers = {
+                'Authorization': f'Basic {auth_b64}',
+                'Content-Type': watson_content_type
+            }
+            
+            params = {
+                'model': 'ko-KR_BroadbandModel'
+            }
+            
+            response = requests.post(
+                stt_url, 
+                headers=headers, 
+                params=params,
+                data=file_content,
+                timeout=60
+            )
+            response.raise_for_status()
+            
+            return response.json()
+        
+        stt_service = get_stt_service()  # 헬스체크용으로만 유지
         loop = asyncio.get_event_loop()
         
-        recognition_result = await loop.run_in_executor(
-            None,
-            lambda: stt_service.recognize(
-                audio=io.BytesIO(file_content),  # 원본 파일 사용
-                content_type=watson_content_type,
-                model='ko-KR_BroadbandModel'
-            ).get_result()
-        )
+        recognition_result = await loop.run_in_executor(None, direct_stt_call_chat)
         
         # STT 결과 확인
         if not recognition_result.get('results') or not recognition_result['results'][0].get('alternatives'):
@@ -428,27 +481,37 @@ async def voice_chat(
         # Step 3: TTS (텍스트 → 음성)
         tts_service = get_tts_service()
         
-        # 한국어 텍스트 처리
-        def safe_synthesize_chat():
-            try:
-                return tts_service.synthesize(
-                    text=ai_response_text,
-                    voice=tts_voice,
-                    accept=f'audio/{audio_format}'
-                ).get_result()
-            except Exception as e:
-                if 'latin-1' in str(e) or 'codec' in str(e):
-                    # 인코딩 오류 시 영어로 대체
-                    fallback_text = "I apologize, but there was an encoding issue with the Korean response."
-                    return tts_service.synthesize(
-                        text=fallback_text,
-                        voice=tts_voice,
-                        accept=f'audio/{audio_format}'
-                    ).get_result()
-                else:
-                    raise e
+        # REST API 직접 호출로 한국어 처리
+        def direct_tts_call_chat():
+            # Watson TTS REST API 엔드포인트
+            tts_url = f"{settings.WATSON_TTS_URL}/v1/synthesize"
+            
+            # Basic 인증 헤더 생성
+            auth_string = f"apikey:{settings.WATSON_TTS_API_KEY}"
+            auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
+            
+            headers = {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Accept': f'audio/{audio_format}',
+                'Authorization': f'Basic {auth_b64}'
+            }
+            
+            data = {
+                'text': ai_response_text,
+                'voice': tts_voice
+            }
+            
+            response = requests.post(tts_url, headers=headers, json=data, timeout=30)
+            response.raise_for_status()
+            
+            # Watson SDK 호환 응답 객체
+            class TTSResponse:
+                def __init__(self, content):
+                    self.content = content
+            
+            return TTSResponse(response.content)
         
-        synthesis_result = await loop.run_in_executor(None, safe_synthesize_chat)
+        synthesis_result = await loop.run_in_executor(None, direct_tts_call_chat)
         
         audio_content = synthesis_result.content
         
