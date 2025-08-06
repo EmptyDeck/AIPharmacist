@@ -88,3 +88,26 @@ user_tokens/
 # 백업 파일
 *.bak
 *.backup
+
+# Build logs
+build.log
+
+# Database files
+*.db
+*.sqlite3
+
+# Examples and test data (용량이 큰 파일들 제외)
+Examples/
+**/test_data/
+**/sample_data/
+
+# Large model files
+*.model
+*.pkl
+*.joblib
+
+# Additional temporary files
+*.tmp
+*.temp
+.pytest_cache/
+.mypy_cache/

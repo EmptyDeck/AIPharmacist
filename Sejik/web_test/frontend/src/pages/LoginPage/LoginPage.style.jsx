@@ -50,7 +50,7 @@ export const LoginButton = styled.button`
 `;
 export const NaverLogo = styled.span`
   font-weight: bold;
-  color: #000;
+  color: #03c75a;
   font-size: 20px;
   margin-right: 8px;
 `;
