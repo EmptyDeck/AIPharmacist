@@ -313,9 +313,6 @@ async def text_to_speech(
                 detail=f"지원하지 않는 오디오 형식입니다. 지원 형식: {', '.join(supported_formats)}"
             )
         
-        # IBM Watson TTS 서비스 호출
-        tts_service = get_tts_service()
-        
         # 음성 합성 실행
         loop = asyncio.get_event_loop()
         
@@ -479,8 +476,6 @@ async def voice_chat(
         ai_response_text = chat_response["answer"]
         
         # Step 3: TTS (텍스트 → 음성)
-        tts_service = get_tts_service()
-        
         # REST API 직접 호출로 한국어 처리
         def direct_tts_call_chat():
             # Watson TTS REST API 엔드포인트
@@ -555,26 +550,38 @@ async def voice_health_check():
         }
     }
     
-    # STT 서비스 상태 확인
+    # STT 서비스 상태 확인 (REST API 사용)
     try:
-        stt_service = get_stt_service()
-        # 간단한 연결 테스트 (모델 목록 가져오기)
-        models = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: stt_service.list_models().get_result()
-        )
-        health_status["stt_status"] = "healthy" if models else "unavailable"
+        def test_stt_connection():
+            stt_url = f"{settings.WATSON_STT_URL}/v1/models"
+            auth_string = f"apikey:{settings.WATSON_STT_API_KEY}"
+            auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
+            
+            headers = {'Authorization': f'Basic {auth_b64}'}
+            response = requests.get(stt_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        
+        models = await asyncio.get_event_loop().run_in_executor(None, test_stt_connection)
+        health_status["stt_status"] = "healthy" if models.get('models') else "unavailable"
     except Exception as e:
         health_status["stt_status"] = "error"
         health_status["stt_error"] = str(e)
     
-    # TTS 서비스 상태 확인
+    # TTS 서비스 상태 확인 (REST API 사용)
     try:
-        tts_service = get_tts_service()
-        # 간단한 연결 테스트 (음성 목록 가져오기)
-        voices = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: tts_service.list_voices().get_result()
-        )
-        health_status["tts_status"] = "healthy" if voices else "unavailable"
+        def test_tts_connection():
+            tts_url = f"{settings.WATSON_TTS_URL}/v1/voices"
+            auth_string = f"apikey:{settings.WATSON_TTS_API_KEY}"
+            auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
+            
+            headers = {'Authorization': f'Basic {auth_b64}'}
+            response = requests.get(tts_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        
+        voices = await asyncio.get_event_loop().run_in_executor(None, test_tts_connection)
+        health_status["tts_status"] = "healthy" if voices.get('voices') else "unavailable"
     except Exception as e:
         health_status["tts_status"] = "error"
         health_status["tts_error"] = str(e)
