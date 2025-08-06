@@ -1,6 +1,6 @@
 import os
 import tempfile
-import requests
+import httpx
 import base64
 try:
     import magic
@@ -172,9 +172,6 @@ async def speech_to_text(
         # 파일 검증
         validation_result = validate_audio_file(file_content)
         
-        # IBM Watson STT 서비스 호출
-        stt_service = get_stt_service()
-        
         # 원본 파일의 MIME 타입 감지
         original_type = validation_result.get('file_type', 'audio/unknown')
         
@@ -192,31 +189,23 @@ async def speech_to_text(
         
         watson_content_type = content_type_mapping.get(original_type, 'audio/wav')
         
-        # REST API 직접 호출로 STT 처리
+        # REST API 직접 호출로 STT 처리 (노트북 방식)
         def direct_stt_call():
-            # Watson STT REST API 엔드포인트
-            stt_url = f"{settings.WATSON_STT_URL}/v1/recognize"
-            
-            # Basic 인증 헤더 생성
-            auth_string = f"apikey:{settings.WATSON_STT_API_KEY}"
-            auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
+            # Watson STT REST API 엔드포인트 (model을 URL 파라미터로)
+            stt_url = f"{settings.WATSON_STT_URL}/v1/recognize?model={model}"
             
             headers = {
-                'Authorization': f'Basic {auth_b64}',
-                'Content-Type': watson_content_type
+                'Content-Type': watson_content_type,
+                'Accept': 'application/json'
             }
             
-            params = {
-                'model': model
-            }
-            
-            response = requests.post(
-                stt_url, 
-                headers=headers, 
-                params=params,
-                data=file_content,  # 바이너리 오디오 데이터
-                timeout=60
-            )
+            with httpx.Client(timeout=60.0) as client:
+                response = client.post(
+                    stt_url, 
+                    headers=headers,
+                    content=file_content,  # 바이너리 오디오 데이터
+                    auth=('apikey', settings.WATSON_STT_API_KEY)  # 노트북과 동일한 인증
+                )
             response.raise_for_status()
             
             return response.json()
@@ -282,7 +271,7 @@ async def speech_to_text(
 @router.post("/voice/tts", summary="텍스트를 음성으로 변환")
 async def text_to_speech(
     text: str = Form(..., description="음성으로 변환할 텍스트"),
-    voice: str = Form(default="ko-KR_JinV3Voice", description="사용할 TTS 음성"),
+    voice: str = Form(default="ko-KR_HyunjunVoice", description="사용할 TTS 음성"),
     audio_format: str = Form(default="mp3", description="출력 오디오 형식")
 ):
     """
@@ -318,8 +307,43 @@ async def text_to_speech(
         
         # REST API 직접 호출로 UTF-8 인코딩 문제 해결
         def direct_tts_call():
-            # Watson TTS REST API 엔드포인트
-            tts_url = f"{settings.WATSON_TTS_URL}/v1/synthesize"
+            # 이모지 및 특수문자 제거 (TTS 호환성을 위해)
+            import re
+            
+            # 완전한 ASCII 호환 텍스트 생성 (Latin-1 문제 완전 해결)
+            def make_tts_safe_text(text):
+                import unicodedata
+                import re
+                
+                # 1. 모든 이모지와 특수문자 완전 제거
+                cleaned = ''.join(char for char in text if unicodedata.category(char) not in ['So', 'Sk', 'Sm', 'Cn'])
+                
+                # 2. 마크다운 제거
+                cleaned = re.sub(r'\*\*(.*?)\*\*', r'\1', cleaned)
+                cleaned = re.sub(r'\n+', ' ', cleaned)
+                cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+                
+                # 3. Latin-1로 인코딩 불가능한 모든 문자 찾아서 제거
+                safe_chars = []
+                for char in cleaned:
+                    try:
+                        char.encode('latin-1')
+                        safe_chars.append(char)
+                    except UnicodeEncodeError:
+                        # Latin-1로 인코딩 불가능한 문자는 공백으로 대체
+                        safe_chars.append(' ')
+                
+                # 4. 연속된 공백 정리
+                final_text = ''.join(safe_chars)
+                final_text = re.sub(r'\s+', ' ', final_text).strip()
+                
+                return final_text
+            
+            # 텍스트 정리 (Latin-1 완전 호환)
+            cleaned_text = make_tts_safe_text(text)  # 완전한 ASCII 호환 변환
+            
+            # Watson TTS REST API 엔드포인트 (voice는 URL 파라미터로)
+            tts_url = f"{settings.WATSON_TTS_URL}/v1/synthesize?voice={voice}"
             
             # Basic 인증 헤더 생성
             auth_string = f"apikey:{settings.WATSON_TTS_API_KEY}"
@@ -332,11 +356,34 @@ async def text_to_speech(
             }
             
             data = {
-                'text': text,
+                'text': cleaned_text,  # 정리된 텍스트 사용
                 'voice': voice
             }
             
-            response = requests.post(tts_url, headers=headers, json=data, timeout=30)
+            # HTTPX를 사용한 완전한 UTF-8 제어
+            import json
+            import httpx
+            
+            # 완벽한 UTF-8 JSON 직렬화
+            json_data = json.dumps(data, ensure_ascii=False, indent=None, separators=(',', ':'))
+            json_bytes = json_data.encode('utf-8')
+            
+            # HTTPX용 헤더 설정 (Authorization은 auth 파라미터로)
+            headers_httpx = {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Accept': f'audio/{audio_format}',
+                'Content-Length': str(len(json_bytes))
+            }
+            
+            print(f"🔍 TTS 디버그: HTTPX로 UTF-8 바이트 {len(json_bytes)}개 전송")
+            
+            with httpx.Client(timeout=30.0) as client:
+                response = client.post(
+                    tts_url,
+                    headers=headers_httpx,
+                    content=json_bytes,  # 완전한 UTF-8 바이트 제어
+                    auth=('apikey', settings.WATSON_TTS_API_KEY)  # 노트북과 동일한 인증 방식
+                )
             response.raise_for_status()
             
             # Watson SDK 호환을 위한 응답 객체
@@ -378,7 +425,7 @@ async def voice_chat(
     audio_file: UploadFile = File(..., description="사용자 음성 파일"),
     underlying_diseases: str = Form(default="", description="기저질환 (쉼표로 구분)"),
     current_medications: str = Form(default="", description="현재 복용 약물 (쉼표로 구분)"),
-    tts_voice: str = Form(default="ko-KR_JinV3Voice", description="응답 음성"),
+    tts_voice: str = Form(default="ko-KR_HyunjunVoice", description="응답 음성"),
     audio_format: str = Form(default="mp3", description="출력 오디오 형식")
 ):
     """
@@ -427,18 +474,17 @@ async def voice_chat(
                 'model': 'ko-KR_BroadbandModel'
             }
             
-            response = requests.post(
-                stt_url, 
-                headers=headers, 
-                params=params,
-                data=file_content,
-                timeout=60
-            )
+            with httpx.Client(timeout=60.0) as client:
+                response = client.post(
+                    stt_url, 
+                    headers=headers, 
+                    params=params,
+                    content=file_content,
+                )
             response.raise_for_status()
             
             return response.json()
         
-        stt_service = get_stt_service()  # 헬스체크용으로만 유지
         loop = asyncio.get_event_loop()
         
         recognition_result = await loop.run_in_executor(None, direct_stt_call_chat)
@@ -478,26 +524,172 @@ async def voice_chat(
         # Step 3: TTS (텍스트 → 음성)
         # REST API 직접 호출로 한국어 처리
         def direct_tts_call_chat():
-            # Watson TTS REST API 엔드포인트
-            tts_url = f"{settings.WATSON_TTS_URL}/v1/synthesize"
+            # 이모지 및 특수문자 제거 (TTS 호환성을 위해)
+            import re
+            
+            # 완전한 ASCII 호환 텍스트 생성 (Latin-1 문제 완전 해결)
+            def make_tts_safe_text(text):
+                import unicodedata
+                import re
+                
+                # 1. 모든 이모지와 특수문자 완전 제거
+                cleaned = ''.join(char for char in text if unicodedata.category(char) not in ['So', 'Sk', 'Sm', 'Cn'])
+                
+                # 2. 마크다운 제거
+                cleaned = re.sub(r'\*\*(.*?)\*\*', r'\1', cleaned)
+                cleaned = re.sub(r'\n+', ' ', cleaned)
+                cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+                
+                # 3. Latin-1로 인코딩 불가능한 모든 문자 찾아서 제거
+                safe_chars = []
+                for char in cleaned:
+                    try:
+                        char.encode('latin-1')
+                        safe_chars.append(char)
+                    except UnicodeEncodeError:
+                        # Latin-1로 인코딩 불가능한 문자는 공백으로 대체
+                        safe_chars.append(' ')
+                
+                # 4. 연속된 공백 정리
+                final_text = ''.join(safe_chars)
+                final_text = re.sub(r'\s+', ' ', final_text).strip()
+                
+                return final_text
+            
+            # 텍스트 정리 (Latin-1 완전 호환)
+            cleaned_text = make_tts_safe_text(ai_response_text)  # 완전한 ASCII 호환 변환
+            
+            print(f"정리된 TTS 텍스트: {repr(cleaned_text)}")
+            print(f"cleaned_text 타입: {type(cleaned_text)}")
+            print(f"cleaned_text 인코딩 테스트:")
+            try:
+                print(f"  UTF-8 인코딩: OK")
+                utf8_bytes = cleaned_text.encode('utf-8')
+                print(f"  UTF-8 바이트 길이: {len(utf8_bytes)}")
+            except Exception as e:
+                print(f"  UTF-8 인코딩 실패: {e}")
+            
+            # Watson TTS REST API 엔드포인트 (voice는 URL 파라미터로)
+            tts_url = f"{settings.WATSON_TTS_URL}/v1/synthesize?voice={tts_voice}"
+            print(f"TTS URL: {tts_url}")
             
             # Basic 인증 헤더 생성
             auth_string = f"apikey:{settings.WATSON_TTS_API_KEY}"
             auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
+            print(f"인증 헤더 생성: OK")
             
             headers = {
                 'Content-Type': 'application/json; charset=utf-8',
                 'Accept': f'audio/{audio_format}',
                 'Authorization': f'Basic {auth_b64}'
             }
+            print(f"헤더: {headers}")
             
             data = {
-                'text': ai_response_text,
-                'voice': tts_voice
+                'text': cleaned_text  # voice는 URL로 이동, text만 JSON에
+            }
+            print(f"데이터: {data}")
+            
+            # 🔍 LATIN-1 오류 완전 추적 및 해결
+            print("🔍 Latin-1 인코딩 문제 완전 추적 시작...")
+            
+            import json
+            import httpx
+            import traceback
+            
+            try:
+                # 1. 텍스트 문자 하나씩 Latin-1 호환성 검사
+                print(f"🔤 텍스트 분석: {repr(cleaned_text[:50])}...")
+                problematic_chars = []
+                for i, char in enumerate(cleaned_text):
+                    try:
+                        char.encode('latin-1')
+                    except UnicodeEncodeError:
+                        problematic_chars.append((i, char, ord(char)))
+                        if len(problematic_chars) >= 5:  # 처음 5개만
+                            break
+                
+                if problematic_chars:
+                    print(f"❌ Latin-1 비호환 문자 발견: {problematic_chars}")
+                    # 문제 문자들을 완전히 제거
+                    for pos, char, code in problematic_chars:
+                        cleaned_text = cleaned_text.replace(char, ' ')
+                    # 연속 공백 정리
+                    import re
+                    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+                    print(f"🔧 문제 문자 제거 후: {repr(cleaned_text[:50])}...")
+                else:
+                    print("✅ 모든 문자가 Latin-1 호환")
+                
+                # 2. Watson TTS API 정확한 파라미터 구성 (text만, voice는 URL에)
+                data = {
+                    'text': cleaned_text
+                }
+                
+                print(f"🎤 TTS 요청 음성: {tts_voice}")
+                print(f"🎤 TTS 요청 형식: {audio_format}")
+                print(f"🎤 TTS 요청 텍스트: {cleaned_text[:50]}...")
+                
+                # 3. 완벽한 UTF-8 JSON 직렬화
+                json_data = json.dumps(data, ensure_ascii=False, indent=None, separators=(',', ':'))
+                json_bytes = json_data.encode('utf-8')
+                
+                print(f"🔤 최종 JSON: {json_data[:100]}...")
+                print(f"🔤 UTF-8 바이트 수: {len(json_bytes)}")
+                
+            except Exception as e:
+                print(f"💥 텍스트 전처리 오류: {e}")
+                traceback.print_exc()
+                raise
+            
+            # 2. HTTPX로 완전한 UTF-8 제어 (Authorization은 auth 파라미터로)
+            headers_utf8 = {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Accept': f'audio/{audio_format}',
+                'Content-Length': str(len(json_bytes))
             }
             
-            response = requests.post(tts_url, headers=headers, json=data, timeout=30)
-            response.raise_for_status()
+            print(f"🌐 HTTPX 헤더: {headers_utf8}")
+            
+            try:
+                print("🚀 HTTPX POST 요청 시작 (완전 UTF-8 제어)...")
+                
+                # HTTPX 클라이언트로 UTF-8 완전 제어 (노트북 방식 적용)
+                with httpx.Client(timeout=30.0) as client:
+                    response = client.post(
+                        tts_url,
+                        headers=headers_utf8,
+                        content=json_bytes,  # 완전한 UTF-8 바이트 제어
+                        auth=('apikey', settings.WATSON_TTS_API_KEY)  # 노트북과 동일한 인증 방식
+                    )
+                
+                print(f"✅ HTTP 응답 상태: {response.status_code}")
+                print(f"📄 HTTP 응답 헤더: {dict(response.headers)}")
+                
+                if response.status_code != 200:
+                    print(f"❌ HTTP 오류 응답: {response.text}")
+                
+                response.raise_for_status()
+                print("🎉 HTTP 응답 성공!")
+                
+            except httpx.RequestError as e:
+                print(f"💥 HTTPX 요청 오류: {e}")
+                print(f"📝 오류 타입: {type(e)}")
+                traceback.print_exc()
+                raise Exception(f"TTS API 호출 실패: {str(e)}")
+            except Exception as e:
+                print(f"💥 예상치 못한 오류: {e}")
+                print(f"🔍 오류 타입: {type(e)}")
+                print(f"📊 오류 내용: {repr(str(e))}")
+                
+                # Latin-1 에러인지 확인
+                if 'latin-1' in str(e).lower():
+                    print("🎯 Latin-1 인코딩 오류 확인!")
+                    print("🔍 에러 발생 위치 추적:")
+                    traceback.print_exc()
+                else:
+                    traceback.print_exc()
+                raise
             
             # Watson SDK 호환 응답 객체
             class TTSResponse:
@@ -514,17 +706,20 @@ async def voice_chat(
         def generate():
             yield audio_content
         
+        # HTTP 헤더는 ASCII만 지원 - 한글 텍스트 완전 제거
+        safe_headers = {
+            "Content-Disposition": f"attachment; filename=voice_chat_response.{audio_format}",
+            "Content-Length": str(len(audio_content)),
+            "X-STT-Confidence": str(stt_confidence),
+            "X-Agent-Used": chat_response.get("model_metadata", {}).get("agent_used", "Unknown"),
+            "X-Text-Length": str(len(user_text)),
+            "X-Response-Length": str(len(ai_response_text))
+        }
+        
         return StreamingResponse(
             generate(),
             media_type=f"audio/{audio_format}",
-            headers={
-                "Content-Disposition": f"attachment; filename=voice_chat_response.{audio_format}",
-                "Content-Length": str(len(audio_content)),
-                "X-User-Text": user_text,
-                "X-AI-Response": ai_response_text[:100] + "..." if len(ai_response_text) > 100 else ai_response_text,
-                "X-STT-Confidence": str(stt_confidence),
-                "X-Agent-Used": chat_response.get("model_metadata", {}).get("agent_used", "Unknown")
-            }
+            headers=safe_headers
         )
         
     except HTTPException:
@@ -558,7 +753,8 @@ async def voice_health_check():
             auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
             
             headers = {'Authorization': f'Basic {auth_b64}'}
-            response = requests.get(stt_url, headers=headers, timeout=10)
+            with httpx.Client(timeout=10.0) as client:
+                response = client.get(stt_url, headers=headers)
             response.raise_for_status()
             return response.json()
         
@@ -576,7 +772,8 @@ async def voice_health_check():
             auth_b64 = base64.b64encode(auth_string.encode('utf-8')).decode('ascii')
             
             headers = {'Authorization': f'Basic {auth_b64}'}
-            response = requests.get(tts_url, headers=headers, timeout=10)
+            with httpx.Client(timeout=10.0) as client:
+                response = client.get(tts_url, headers=headers)
             response.raise_for_status()
             return response.json()
         
