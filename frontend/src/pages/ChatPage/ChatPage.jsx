@@ -8,7 +8,6 @@ import ReactMarkdown from "react-markdown";
 
 import { useVoiceConversation } from "./hooks/useVoiceConversation"; // sejik
 
-
 const commonConditions = [
   "당뇨병",
   "고혈압",
@@ -53,50 +52,45 @@ export default function ChatPage() {
   const [userName, setUserName] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-
-
   //seijk
   const [isAutoVoiceMode, setIsAutoVoiceMode] = useState(false);
   const { isRecording, toggleRecording } = useVoiceConversation({
-      apiBaseUrl: "http://localhost:8001",
-      autoStart: true,
-      onUserMessage: (text) => {
-        if (!text.trim()) return;
-        const userMessage = {
-          id: Date.now().toString(),
-          type: "user",
-          content: text,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, userMessage]);
-      },
-      onBotMessage: (text) => {
-        if (!text.trim()) return;
-        const botMessage = {
-          id: (Date.now() + 1).toString(),
-          type: "bot",
-          content: text,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, botMessage]);
-      },
-    });
+    apiBaseUrl: "http://localhost:8001",
+    autoStart: true,
+    onUserMessage: (text) => {
+      if (!text.trim()) return;
+      const userMessage = {
+        id: Date.now().toString(),
+        type: "user",
+        content: text,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+    },
+    onBotMessage: (text) => {
+      if (!text.trim()) return;
+      const botMessage = {
+        id: (Date.now() + 1).toString(),
+        type: "bot",
+        content: text,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, botMessage]);
+    },
+  });
 
-    // 자동 음성 대화 토글 핸들러
-    const handleToggleAutoVoice = () => {
-      if (isAutoVoiceMode) {
-        // 모드 끄기 => 녹음 종료
-        if (isRecording) toggleRecording();
-        setIsAutoVoiceMode(false);
-      } else {
-        // 모드 켜기 => 녹음 시작
-        if (!isRecording) toggleRecording();
-        setIsAutoVoiceMode(true);
-      }
-    };
-  
-
-
+  // 자동 음성 대화 토글 핸들러
+  const handleToggleAutoVoice = () => {
+    if (isAutoVoiceMode) {
+      // 모드 끄기 => 녹음 종료
+      if (isRecording) toggleRecording();
+      setIsAutoVoiceMode(false);
+    } else {
+      // 모드 켜기 => 녹음 시작
+      if (!isRecording) toggleRecording();
+      setIsAutoVoiceMode(true);
+    }
+  };
 
   useEffect(() => {
     setMessages([
@@ -259,25 +253,19 @@ export default function ChatPage() {
 
       <S.ChatContainer>
         <S.MessageList>
-
-        {/* 자동 음성 대화 토글 버튼 */}
-        <button
-          style={{
-            margin: "10px",
-            padding: "8px 12px",
-            backgroundColor: isAutoVoiceMode ? "#4caf50" : "#ccc",
-            color: isAutoVoiceMode ? "white" : "black",
-            borderRadius: "4px",
-            cursor: "pointer",
-            border: "none",
-          }}
-          onClick={handleToggleAutoVoice}
-        >
-          {isAutoVoiceMode ? "음성 대화 중지" : "음성 대화 시작"}
-        </button>
-
-
-
+          <button
+            style={{
+              margin: "10px",
+              padding: "8px 12px",
+              backgroundColor: isAutoVoiceMode ? "#4caf50" : "#ccc",
+              color: isAutoVoiceMode ? "white" : "black",
+              borderRadius: "4px",
+              cursor: "pointer",
+              border: "none",
+            }}
+          >
+            {isAutoVoiceMode ? "음성 대화 중지" : "음성 대화 시작"}
+          </button>
 
           {messages.map((message) => (
             <S.MessageBubble key={message.id} $isUser={message.type === "user"}>
@@ -348,7 +336,10 @@ export default function ChatPage() {
                 disabled={isLoading}
               />
               <div title="음성 입력">
-                <Mic style={{ cursor: "pointer" }} />
+                <Mic
+                  style={{ cursor: "pointer" }}
+                  onClick={handleToggleAutoVoice}
+                />
               </div>
             </S.InputWrapper>
             <S.SendButton onClick={handleSendMessage} disabled={isLoading}>
