@@ -3,3 +3,16 @@ requests
 ibm-watson-machine-learning
 python-dotenv
 numpy
+fastapi
+pydantic
+google
+google-cloud-speech
+google-cloud-texttospeech
+fastapi
+uvicorn
+pydantic
+google-cloud-speech
+google-cloud-texttospeech
+google-generativeai
+sqlalchemy
+pymysql
