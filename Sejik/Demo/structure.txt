@@ -1,0 +1,123 @@
+Demo/
+│
+    └── Demo/
+        ├── backend/
+        │   ├── api/
+        │   │   ├── chatbot/
+        │   │   ├── __init__.py
+        │   │   ├── calendarAI.py
+        │   │   ├── explainAI.py
+        │   │   └── warnAI.py
+        │   │   ├── test/
+        │   │   ├── __init__.py
+        │   │   ├── simple_calendar_test.py
+        │   │   ├── test_google_oauth.py
+        │   │   └── test_voice_debug.py
+        │   ├── __init__.py
+        │   ├── auth.py
+        │   ├── calendar.py
+        │   ├── chat.py
+        │   ├── email.py
+        │   ├── file_upload.py
+        │   ├── google_auth_with_userinfo.py
+        │   ├── users.py
+        │   └── voice.py
+        │   ├── core/
+        │   ├── __init__.py
+        │   ├── .env
+        │   └── config.py
+        │   ├── DB/
+        │   │   ├── migrations/
+        │   │   └── .gitkeep
+        │   ├── database.py
+        │   ├── init.sql
+        │   └── README.md
+        │   ├── schemas/
+        │   ├── __init__.py
+        │   ├── chat.py
+        │   └── user.py
+        │   ├── utils/ # Utility modules
+        │   │   ├── googleCalender/
+        │   │   ├── __init__.py
+        │   │   ├── cal_agent.py
+        │   │   └── text_to_cal_json.py
+        │   │   ├── googleToken/
+        │   │   ├── __init__.py
+        │   │   └── user_token_manager.py
+        │   │   ├── ocr/
+        │   │   ├── __init__.py
+        │   │   └── ocr_processor.py
+        │   └── __init__.py
+        ├── .dockerignore
+        ├── .env
+        ├── .env.example
+        ├── .gitignore
+        ├── .txt
+        ├── build-optimized.sh
+        ├── docker-compose.yml
+        ├── Dockerfile
+        ├── fastAPI_example
+        ├── main.py
+        ├── requirements.txt
+        ├── setup-ssl.sh
+        └── test_google_oauth.py
+        └── frontend/
+            ├── build/
+            │   ├── static/
+            │   │   ├── css/
+            │   │   ├── main.739d8fec.css
+            │   │   └── main.739d8fec.css.map
+            │   │   ├── js/
+            │   │   ├── 453.670e15c7.chunk.js
+            │   │   ├── 453.670e15c7.chunk.js.map
+            │   │   ├── main.56c2d72d.js
+            │   │   ├── main.56c2d72d.js.LICENSE.txt
+            │   │   └── main.56c2d72d.js.map
+            │   │   └── media/
+            │   │   └── blurry-gradient-haikei.eb145b3251d2d8a73aea7e4c60d3af71.svg
+            ├── asset-manifest.json
+            ├── favicon.ico
+            ├── index.html
+            ├── logo192.png
+            ├── manifest.json
+            └── robots.txt
+            ├── public/
+            ├── favicon.ico
+            ├── index.html
+            ├── logo192.png
+            ├── manifest.json
+            └── robots.txt
+            ├── src/ # Source code
+            │   ├── apis/
+            │   └── apis.js
+            │   ├── axios/
+            │   └── index.js
+            │   ├── images/ # Image files
+            │   └── blurry-gradient-haikei.svg
+            │   ├── pages/
+            │   │   ├── ChatPage/
+            │   │   │   ├── hooks/
+            │   │   │   └── useVoiceConversation.js
+            │   │   ├── ChatPage.jsx
+            │   │   ├── ChatPage.style.jsx
+            │   │   └── index.js
+            │   │   ├── LoginPage/
+            │   │   ├── index.js
+            │   │   ├── LoginPage.jsx
+            │   │   └── LoginPage.style.jsx
+            │   │   ├── MailPage/
+            │   │   ├── index.js
+            │   │   ├── MailPage.jsx
+            │   │   └── MailPage.style.jsx
+            │   │   └── MainPage/
+            │   │   ├── index.js
+            │   │   ├── MainPage.jsx
+            │   │   └── MainPage.style.jsx
+            ├── App.js
+            ├── index.js
+            └── reportWebVitals.js
+        ├── .gitignore
+        ├── 11111
+        ├── package-lock.json
+        ├── package.json
+        └── README.md

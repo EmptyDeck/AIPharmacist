@@ -4,3 +4,6 @@
 .env
 /a/node_modules
 backend/api/env.env
+**/client_secret.json
+*.pyc
+**/gen-lang-client.json

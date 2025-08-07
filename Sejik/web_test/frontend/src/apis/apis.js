@@ -1,4 +1,5 @@
 import { jsonAxios } from "../axios";
+import smartApiCall from "./smartApi";
 
 // 스마트 API 함수
 const smartApiCall = async (endpoint, data = null, method = 'POST') => {

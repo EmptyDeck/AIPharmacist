@@ -1,0 +1,113 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose*.yml
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Documentation
+*.md
+docs/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Node.js (프론트엔드 관련)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 환경변수 (민감한 정보)
+.env.local
+.env.production
+.env.*.local
+
+# Google OAuth 토큰 파일들 (보안상 제외)
+user_tokens/
+*.json
+
+# 백업 파일
+*.bak
+*.backup
+
+# Build logs
+build.log
+
+# Database files
+*.db
+*.sqlite3
+
+# Examples and test data (용량이 큰 파일들 제외)
+Examples/
+**/test_data/
+**/sample_data/
+
+# Large model files
+*.model
+*.pkl
+*.joblib
+
+# Additional temporary files
+*.tmp
+*.temp
+.pytest_cache/
+.mypy_cache/

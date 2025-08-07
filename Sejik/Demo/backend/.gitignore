@@ -1,0 +1,26 @@
+# JetBrains IDEs
+.idea/
+
+
+.env
+
+# Markdown 문서들 (임시 문서들)
+*.md
+!README.md
+
+# Byte-code files
+*.pyc
+__pycache__/
+
+venv/
+
+# 업로드된 파일들 (런타임에 생성)
+uploads/
+
+fastAPI_example
+
+
+# Google OAuth 토큰 (보안상 Git에서 제외)
+google_token.json
+user_tokens/
+google_token_*.json
