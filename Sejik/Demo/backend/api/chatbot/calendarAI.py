@@ -4,7 +4,7 @@ import logging
 from core.config import settings
 from utils.googleCalender.text_to_cal_json import text_to_cal_converter
 from utils.googleCalender.cal_agent import calendar_agent       # 싱글톤
-import google.generativeai as genai
+from google import genai
 
 
 class CalendarAI:

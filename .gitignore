@@ -7,3 +7,4 @@ backend/api/env.env
 **/client_secret.json
 *.pyc
 **/gen-lang-client.json
+Sejik/Demo/backend/utils/googleCalender/token.json

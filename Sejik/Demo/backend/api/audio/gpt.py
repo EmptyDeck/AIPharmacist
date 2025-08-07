@@ -121,8 +121,7 @@ from pydantic import BaseModel
 from core.config import settings
 
 # Google-Gemini SDK
-# from google import genai
-import google.generativeai as genai
+from google import genai
 
 # 캘린더용 AI & 에이전트
 from api.chatbot.calendarAI import calendar_ai       # 분석·추가 담당
