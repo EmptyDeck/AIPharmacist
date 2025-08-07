@@ -136,6 +136,8 @@ from utils.cache import get_vision_result, set_vision_result
 @router.post("/chat", response_model=ChatResponse, summary="의료 AI 채팅")
 async def get_chat_response(request: ChatRequest):
     try:
+        request.question = (f"{request.question} " f"사용자의 기저질환(참고용): {request.underlying_diseases} "f"현재 복용 중인 약물(참고용): {request.current_medications}")
+
         loop = asyncio.get_event_loop()
         user_id = "default"
         
