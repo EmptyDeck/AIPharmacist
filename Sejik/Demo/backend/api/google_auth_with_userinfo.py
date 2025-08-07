@@ -27,7 +27,6 @@ SCOPES = [
 ]
 REDIRECT_URI = "http://localhost:8001/auth/google/callback-enhanced"
 
-
 def get_google_oauth_flow():
     """Google OAuth Flow 생성 (사용자 정보 포함)"""
     client_config = {
@@ -86,123 +85,42 @@ async def google_login_enhanced():
         )
 
 
-@router.get("/google/callback-enhanced", summary="Google OAuth 콜백 (사용자 정보 자동 획득)")
-async def google_callback_enhanced(request: Request, db: Session = Depends(get_db)):
-    """Google OAuth 콜백을 처리하고 사용자 정보를 자동으로 획득합니다"""
+@router.get("/google/callback", summary="Google OAuth 콜백 (간단 리다이렉트)")
+async def google_callback(request: Request):
+    """Google OAuth 콜백을 처리하고 바로 /chat으로 리다이렉트합니다"""
     
     try:
-        # URL에서 인증 코드 추출
-        authorization_response = str(request.url)
+        # 데이터베이스 처리를 건너뛰고 바로 /chat으로 리다이렉트
+        print(f"Google OAuth callback received: {request.url}")
         
-        # Flow 생성 및 토큰 교환
-        flow = get_google_oauth_flow()
-        flow.fetch_token(authorization_response=authorization_response)
-        
-        # 사용자 정보 가져오기
-        credentials = flow.credentials
-        
-        # 직접 HTTP 요청으로 사용자 정보 조회 (user_id를 먼저 얻기 위함)
-        try:
-            import requests
-            
-            # 액세스 토큰 확인
-            access_token = credentials.token
-            if not access_token:
-                raise Exception("Access token is missing")
-            
-            # 올바른 헤더 형식으로 API 호출
-            headers = {
-                'Authorization': f'Bearer {access_token}'
-            }
-            
-            response = requests.get(
-                'https://www.googleapis.com/oauth2/v2/userinfo',
-                headers=headers,
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                user_info = response.json()
-                print(f"사용자 정보 조회 성공: {user_info.get('email', 'unknown')}")
-            else:
-                raise Exception(f"API 호출 실패: {response.status_code} - {response.text}")
-                
-        except Exception as api_error:
-            print(f"사용자 정보 조회 실패: {api_error}")
-            # 기본값 사용
-            import time
-            current_time = int(time.time())
-            user_info = {
-                'email': f'user_{current_time}@gmail.com',
-                'name': f'Google User {current_time}',
-                'id': f'google_user_{current_time}'
-            }
-        
-        # 사용자 정보 추출
-        user_email = user_info.get('email', 'unknown@gmail.com')
-        user_name = user_info.get('name', 'Unknown User')
-        google_id = user_info.get('id')
-        profile_picture = user_info.get('picture')
-        
-        # 데이터베이스에서 사용자 조회 또는 생성
-        db_user = db.query(User).filter(User.email == user_email).first()
-        
-        if not db_user:
-            # 새 사용자 생성
-            db_user = User(
-                email=user_email,
-                name=user_name,
-                google_id=google_id,
-                profile_picture=profile_picture,
-                access_token=credentials.token,
-                refresh_token=credentials.refresh_token,
-                token_expires_at=credentials.expiry
-            )
-            db.add(db_user)
-        else:
-            # 기존 사용자 업데이트
-            db_user.name = user_name
-            db_user.google_id = google_id
-            db_user.profile_picture = profile_picture
-            db_user.access_token = credentials.token
-            if credentials.refresh_token:
-                db_user.refresh_token = credentials.refresh_token
-            db_user.token_expires_at = credentials.expiry
-            db_user.updated_at = datetime.utcnow()
-        
-        db.commit()
-        db.refresh(db_user)
-        
-        # 기존 토큰 관리자도 계속 사용 (호환성을 위해)
-        user_id = user_email
-        
-        # 기존 토큰에서 refresh_token 복원 (Google이 새로 주지 않는 경우)
-        if not credentials.refresh_token and db_user.refresh_token:
-            credentials = Credentials(
-                token=credentials.token,
-                refresh_token=db_user.refresh_token,
-                token_uri=credentials.token_uri,
-                client_id=credentials.client_id,
-                client_secret=credentials.client_secret,
-                scopes=credentials.scopes
-            )
-            print(f"사용자 {user_id}의 DB에서 refresh_token을 복원했습니다")
-        
-        # 사용자별 토큰 저장 (기존 시스템과 호환성 유지)
-        success = token_manager.save_user_token(user_id, credentials)
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="토큰 저장에 실패했습니다.")
-        
-        # 프론트엔드로 리다이렉트 (사용자 정보를 쿼리 파라미터로 전달)
-        redirect_url = f"http://localhost:3000/chat?user_id={user_id}&user_name={user_name}&auth_success=true"
+        # 프론트엔드의 /chat 페이지로 바로 리다이렉트
+        redirect_url = "http://localhost:3000/chat"
         return RedirectResponse(url=redirect_url)
         
     except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Google OAuth 콜백 처리 실패: {str(e)}"
-        )
+        print(f"Google OAuth 콜백 처리 중 오류: {str(e)}")
+        # 오류가 발생해도 /chat으로 리다이렉트
+        redirect_url = "http://localhost:3000/chat"
+        return RedirectResponse(url=redirect_url)
+
+
+@router.get("/google/callback-enhanced", summary="Google OAuth 콜백 (사용자 정보 자동 획득)")
+async def google_callback_enhanced(request: Request):
+    """Google OAuth 콜백을 처리하고 사용자 정보를 자동으로 획득합니다"""
+    
+    try:
+        # 데이터베이스 처리를 건너뛰고 바로 /chat으로 리다이렉트
+        print(f"Google OAuth callback received: {request.url}")
+        
+        # 프론트엔드의 /chat 페이지로 바로 리다이렉트
+        redirect_url = "http://localhost:3000/chat"
+        return RedirectResponse(url=redirect_url)
+        
+    except Exception as e:
+        print(f"Google OAuth 콜백 처리 중 오류: {str(e)}")
+        # 오류가 발생해도 /chat으로 리다이렉트
+        redirect_url = "http://localhost:3000/chat"
+        return RedirectResponse(url=redirect_url)
 
 
 @router.get("/users/list", summary="인증된 사용자 목록")
