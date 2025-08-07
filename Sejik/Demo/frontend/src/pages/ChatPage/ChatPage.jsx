@@ -56,6 +56,7 @@ export default function ChatPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [uploadedFileId, setUploadedFileId] = useState(null); // 🆕 file_id 저장용
+  const [isProcessing, setIsProcessing] = useState(false); // 🆕 중복 방지 플래그
 
 
   //seijk
@@ -114,74 +115,141 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    console.log("🚨 handleSendMessage 호출됨!");
-    console.log("inputMessage:", inputMessage, "medicalDocument:", medicalDocument, "selectedFile:", selectedFile);
-    console.log("uploadedFileId:", uploadedFileId);
-    
-    // 🆕 조건 강화: 실제 입력이 있을 때만 전송
-    const hasTextInput = inputMessage.trim() || medicalDocument.trim();
-    const hasFileToProcess = uploadedFileId; // selectedFile 대신 uploadedFileId 확인
-    
-    if (!hasTextInput && !hasFileToProcess) {
-      console.log("❌ 전송할 내용이 없음. 중단.");
-      return;
+const handleSendMessage = async () => {
+  // 🆕 중복 실행 방지
+  if (isProcessing || isLoading) {
+    console.log("🛑 이미 처리 중입니다. 중복 실행 방지.");
+    return;
+  }
+  
+  console.log("🚨 handleSendMessage 호출됨!");
+  console.log("inputMessage:", inputMessage, "medicalDocument:", medicalDocument, "selectedFile:", selectedFile);
+  console.log("uploadedFileId:", uploadedFileId);
+  
+  setIsProcessing(true); // 🆕 처리 시작 플래그
+  
+  try {
+    // 파일이 선택되었지만 아직 업로드 안된 경우 먼저 업로드
+    if (selectedFile && !uploadedFileId) {
+      console.log("🔄 선택된 파일을 먼저 업로드합니다...");
+      
+      try {
+        setMessages((prev) => [...prev, {
+          id: Date.now().toString(),
+          type: "bot", 
+          content: "📤 파일을 업로드하고 있습니다...",
+          timestamp: new Date(),
+        }]);
+        
+        const res = await postFiles(selectedFile);
+        console.log("📤 파일 업로드 완료:", res);
+        
+        if (res.file_id) {
+          setUploadedFileId(res.file_id);
+          console.log("✅ 파일 ID 설정됨:", res.file_id);
+          
+          // 🆕 업로드 완료 후 메시지 전송 (파일 ID 포함)
+          await sendMessageWithFileId(res.file_id);
+          return;
+        }
+      } catch (error) {
+        console.error("❌ 파일 업로드 실패:", error);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            type: "bot",
+            content: "❌ 파일 업로드 중 오류가 발생했습니다.",
+            isError: true,
+            timestamp: new Date(),
+          },
+        ]);
+        return;
+      }
     }
     
-    const contentToSend =
-      inputMessage.trim() ||
-      medicalDocument.trim() ||
-      "업로드된 파일에 대해 설명해주세요"; // 🆕 파일만 있을 때 기본 질문
+    // 일반적인 경우 (파일 없거나 이미 업로드됨)
+    await sendMessageWithFileId(uploadedFileId);
+    
+  } finally {
+    setIsProcessing(false); // 🆕 처리 완료 플래그
+  }
+};
 
-    const userMessage = {
-      id: Date.now().toString(),
-      type: "user",
-      content: contentToSend,
-      document: medicalDocument,
-      conditions: selectedConditions,
-      medications: selectedMedications,
-      file: selectedFile,
-      fileId: uploadedFileId, // 이제 null이 아님
+// 실제 메시지 전송 함수 분리
+const sendMessageWithFileId = async (fileId) => {
+  console.log("📨 sendMessageWithFileId 호출, fileId:", fileId);
+  
+  const hasTextInput = inputMessage.trim() || medicalDocument.trim();
+  const hasFileToProcess = fileId;
+  
+  if (!hasTextInput && !hasFileToProcess) {
+    console.log("❌ 전송할 내용이 없음. 중단.");
+    return;
+  }
+  
+  let contentToSend;
+  if (hasTextInput) {
+    contentToSend = inputMessage.trim() || medicalDocument.trim();
+  } else if (hasFileToProcess) {
+    contentToSend = "업로드된 파일에 대해 설명해주세요";
+  }
+
+  const userMessage = {
+    id: Date.now().toString(),
+    type: "user",
+    content: contentToSend,
+    document: medicalDocument,
+    conditions: selectedConditions,
+    medications: selectedMedications,
+    file: selectedFile,
+    fileId: fileId,
+    timestamp: new Date(),
+  };
+
+  console.log("📨 전송할 메시지:", userMessage);
+  setMessages((prev) => [...prev, userMessage]);
+  setInputMessage("");
+  setMedicalDocument("");
+  setIsLoading(true);
+
+  try {
+    const response = await postChat(userMessage);
+    const botMessage = {
+      id: (Date.now() + 1).toString(),
+      type: "bot",
+      content: response.answer,
+      confidence: response.model_metadata?.confidence,
+      warnings: [],
+      interactions: [],
+      references: [],
       timestamp: new Date(),
     };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputMessage("");
-    setIsLoading(true);
-
-    try {
-      console.log("보낼 메시지:", userMessage);
-      const response = await postChat(userMessage);
-      const botMessage = {
+    setMessages((prev) => [...prev, botMessage]);
+    
+    // 성공적으로 전송된 후에만 파일 정보 초기화
+    setSelectedFile(null);
+    setUploadedFileName("");
+    setUploadedFileId(null);
+    
+  } catch(e) {
+    console.error("❌ postChat 통신 에러:", e);
+    setMessages((prev) => [
+      ...prev,
+      {
         id: (Date.now() + 1).toString(),
         type: "bot",
-        content: response.answer,
-        confidence: response.model_metadata?.confidence,
-        warnings: [],
-        interactions: [],
-        references: [],
+        content: "죄송합니다. 오류가 발생했습니다.",
+        isError: true,
         timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botMessage]);
-    } catch(e) {
-      console.error("postChat 통신 에러:", e);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          type: "bot",
-          content: "죄송합니다. 오류가 발생했습니다.",
-          isError: true,
-          timestamp: new Date(),
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-      setSelectedFile(null);
-      setUploadedFileName("");
-      setUploadedFileId(null);
-    }
-  };
+      },
+    ]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
 
 
 
@@ -380,10 +448,14 @@ export default function ChatPage() {
                 />
               </div>
             </S.InputWrapper>
-            <S.SendButton onClick={handleSendMessage} disabled={isLoading}>
-              <Send size={18} />
-              전송
-            </S.SendButton>
+              <S.SendButton 
+                onClick={handleSendMessage} 
+                disabled={isLoading || isProcessing} // 🆕 처리 중일 때 비활성화
+              >
+                <Send size={18} />
+                {isProcessing ? "처리중..." : "전송"}
+              </S.SendButton>
+
           </S.MessageInputContainer>
         </S.InputArea>
       </S.ChatContainer>
