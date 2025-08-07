@@ -6,7 +6,7 @@ export const postChat = async (userMessage) => {
   return await smartApiCall('/api/chat', {
     question: userMessage.content,
     underlying_diseases: userMessage.conditions || [],
-    currentMedications: userMessage.medications || [],
+    current_medications: userMessage.medications || [],
     file_id: userMessage.fileId || null, // 🆕 file_id 추가
   }, 'POST');
 };
