@@ -135,111 +135,127 @@ from utils.cache import get_vision_result, set_vision_result
 
 @router.post("/chat", summary="의료 AI 채팅")
 async def get_chat_response(request: ChatRequest):
+    print("="*60)
+    print("[DEBUG] 🚀 get_chat_response 함수 시작")
+    print(f"[DEBUG] 📥 받은 요청:")
+    print(f"[DEBUG] - request.file_id: '{request.file_id}' (타입: {type(request.file_id)})")
+    print(f"[DEBUG] - request.question: '{request.question}'")
+    print("="*60)
+    
     try:
         loop = asyncio.get_event_loop()
         user_id = "default"
         
-        # 파일 ID가 있으면 캐시된 watsonx vision 결과 먼저 확인
         if request.file_id:
+            print("🎯 [DEBUG] ✅ 파일 ID가 있음! 파일 처리 모드로 진입")
+            
             try:
+                print(f"[DEBUG] 💻 파일 처리 try 블록 진입")
                 print(f"[INFO] 파일 처리 시작 - {request.file_id}")
                 
-                # 🔧 캐시에서 이미 처리된 결과 확인 (함수 사용)
-                cached_result = get_vision_result(request.file_id)
+                # 🔧 사용자 질문이 있으면 캐시 무시하고 새로 처리
+                user_has_specific_question = (
+                    request.question.strip() and 
+                    request.question.strip() not in ["업로드된 파일에 대해 설명해주세요", "이 파일에 대해 설명해주세요"]
+                )
                 
-                if cached_result and cached_result.get("success"):
-                    print(f"[INFO] 캐시된 watsonx vision 결과 사용")
+                print(f"[DEBUG] 사용자 구체적 질문 여부: {user_has_specific_question}")
+                print(f"[DEBUG] 사용자 질문: '{request.question}'")
+                
+                if user_has_specific_question:
+                    print(f"[DEBUG] 🆕 사용자 질문이 있어서 새로 watsonx vision 처리")
                     
-                    # 캐시된 텍스트와 사용자 질문을 결합
-                    combined_prompt = f"""다음은 watsonx vision으로 분석한 의료 문서 내용입니다:
-
-                                        === 분석된 내용 ===
-                                        {cached_result["text"]}
-
-                                        === 사용자 질문 ===
-                                        {request.question}
-
-                                        위 의료 문서 내용을 바탕으로 사용자의 질문에 전문적이고 친근하게 답변해주세요."""
-
-                    # 기존 텍스트 LLM으로 최종 답변 생성
-                    final_answer = await loop.run_in_executor(None, call_llm, combined_prompt)
+                    # 사용자 질문을 그대로 prompt로 사용
+                    user_prompt = request.question.strip()
+                    print(f"[INFO] watsonx vision 호출 - 사용자 프롬프트: {user_prompt}")
+                    
+                    # 새로 watsonx vision 처리
+                    watsonx_result = await loop.run_in_executor(
+                        None, process_image_with_watsonx_vision, request.file_id, user_prompt
+                    )
+                    print(f"[DEBUG] ✅ 새로운 watsonx vision 결과: {watsonx_result[:100]}...")
                     
                     return {
-                        "answer": final_answer,
+                        "answer": watsonx_result,
                         "user_context": {
                             "underlying_diseases": request.underlying_diseases or [],
                             "medications": request.currentMedications or []
                         },
                         "model_metadata": {
-                            "llm_classification": "cached_watsonx_vision",
-                            "agent_used": "Cached watsonx Vision + LLM",
-                            "model_name": "watsonx Vision + IBM Watson",
+                            "llm_classification": "fresh_watsonx_vision_with_user_question",
+                            "agent_used": "Fresh watsonx Vision with User Question",
+                            "model_name": "watsonx Vision",
                             "status": "success"
                         },
                         "status": "success"
                     }
                 else:
-                    print(f"[INFO] 캐시에 결과 없음, 새로 처리")
-                
-                # 캐시에 없거나 실패한 경우 새로 처리
-                medical_prompt = f"""당신은 의료 전문 AI 어시스턴트 Dr. Watson입니다.
+                    print(f"[DEBUG] 📋 일반적인 질문이거나 질문 없음 → 캐시 사용")
+                    
+                    # 기존 캐시 로직
+                    cached_result = get_vision_result(request.file_id)
+                    print(f"[DEBUG] 캐시 결과: {cached_result}")
+                    
+                    if cached_result and cached_result.get("success"):
+                        print(f"[DEBUG] ✅ 캐시된 결과 발견!")
+                        print(f"[INFO] 캐시된 watsonx vision 결과 사용")
+                        
+                        # 캐시된 텍스트와 사용자 질문을 결합
+                        combined_prompt = f"""다음은 watsonx vision으로 분석한 의료 문서 내용입니다:
 
-                                    이 이미지를 분석하고 사용자의 질문에 간결하고 정확하게 답변해주세요.
+                                            === 분석된 내용 ===
+                                            {cached_result["text"]}
 
-                                    사용자 질문: {request.question}
+                                            === 사용자 질문 ===
+                                            {request.question}
 
-                                    다음 관점에서 분석해주세요:
-                                    - 문서 종류 (처방전, 약품 라벨, 검사결과 등)
-                                    - 주요 의료 정보 (약물명, 용량, 복용법 등)
-                                    - 주의사항이나 특이사항
-                                    - 사용자 질문에 대한 구체적인 답변
+                                            위 의료 문서 내용을 바탕으로 사용자의 질문에 전문적이고 친근하게 답변해주세요."""
 
-                                    중복되는 내용 없이 간결하게 답변해주세요."""
-
-                # 🆕 watsonx vision 처리
-                watsonx_result = await loop.run_in_executor(
-                    None, process_image_with_watsonx_vision, request.file_id, medical_prompt
-                )
-                
-                # 🆕 결과를 캐시에 저장 (중요!)
-                set_vision_result(request.file_id, {
-                    "success": True,
-                    "text": watsonx_result,
-                    "method": "fresh_watsonx_vision"
-                })
-                
-                return {
-                    "answer": watsonx_result,
-                    "user_context": {
-                        "underlying_diseases": request.underlying_diseases or [],
-                        "medications": request.currentMedications or []
-                    },
-                    "model_metadata": {
-                        "llm_classification": "fresh_watsonx_vision",
-                        "agent_used": "Fresh watsonx Vision",
-                        "model_name": "watsonx Vision",
-                        "status": "success"
-                    },
-                    "status": "success"
-                }
+                        print(f"[DEBUG] 📝 LLM 호출 시작 (캐시된 결과)")
+                        final_answer = await loop.run_in_executor(None, call_llm, combined_prompt)
+                        print(f"[DEBUG] ✅ LLM 응답 완료: {final_answer[:100]}...")
+                        
+                        return {
+                            "answer": final_answer,
+                            "user_context": {
+                                "underlying_diseases": request.underlying_diseases or [],
+                                "medications": request.currentMedications or []
+                            },
+                            "model_metadata": {
+                                "llm_classification": "cached_watsonx_vision",
+                                "agent_used": "Cached watsonx Vision + LLM",
+                                "model_name": "watsonx Vision + IBM Watson",
+                                "status": "success"
+                            },
+                            "status": "success"
+                        }
+                    else:
+                        print(f"[DEBUG] ❌ 캐시에 결과 없음, 새로 처리")
+                        # 새로 처리 로직...
                 
             except Exception as watsonx_error:
+                print(f"[DEBUG] ❌❌❌ 파일 처리 중 예외 발생!")
                 print(f"[ERROR] watsonx Vision 처리 실패: {str(watsonx_error)}")
-                
-                # 🆕 실패한 결과도 캐시에 저장 (재시도 방지)
-                set_vision_result(request.file_id, {
-                    "success": False,
-                    "text": "",
-                    "error": str(watsonx_error),
-                    "method": "failed_watsonx_vision"
-                })
+                import traceback
+                print(f"[DEBUG] 스택 트레이스: {traceback.format_exc()}")
                 
                 return {
                     "answer": f"이미지 처리 중 오류가 발생했습니다: {str(watsonx_error)}",
                     "status": "error"
                 }
-     
-       
+        else:
+            print("🔍 [DEBUG] ❌ 파일 ID가 없음! 일반 텍스트 모드로 진입")
+        
+        print(f"[DEBUG] 📝 일반 LLM 분류 처리 시작")
+        
+        # 캘린더 확인 응답 대기 중인지 체크
+        print(f"[DEBUG] 📅 캘린더 세션 확인")
+        if user_id in _user_sessions and _user_sessions[user_id].get('waiting_calendar_confirmation'):
+            print(f"[DEBUG] ✅ 캘린더 확인 모드")
+            print(f"[INFO] 캘린더 확인 응답 처리 중: {request.question}")
+
+
+
         # 캘린더 확인 응답 대기 중인지 체크
         if user_id in _user_sessions and _user_sessions[user_id].get('waiting_calendar_confirmation'):
             print(f"[INFO] 캘린더 확인 응답 처리 중: {request.question}")
