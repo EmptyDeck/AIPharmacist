@@ -2,18 +2,17 @@
 import os
 import logging
 from core.config import settings
-from google import genai
-
 from utils.googleCalender.text_to_cal_json import text_to_cal_converter
 from utils.googleCalender.cal_agent import calendar_agent       # 싱글톤
-from google import genai   
+import google.generativeai as genai
+
 
 class CalendarAI:
     def __init__(self):
         # API-KEY → 환경변수
         os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
-        self.client    = genai.Client()              # 코드2와 동일
-        self.model_id  = "gemini-2.0-flash-001"      # 고정 사용
+        self.client = genai.Client()              # 코드2와 동일
+        self.model_id = "gemini-2.0-flash-001"      # 고정 사용
 
     # ----------------------------
     # LLM 호출 (코드2 방식 그대로)
@@ -32,11 +31,10 @@ class CalendarAI:
             logging.error(f"🛑 CalendarAI(Gemini) 호출 실패: {e}")
             raise Exception(f"CalendarAI(Gemini) 호출 실패: {e}")
 
-
-
     # ─────────────────────────────────────────────
     # 1단계 – 분석 & “추가해드릴까요?” 문장 생성
     # ─────────────────────────────────────────────
+
     def analyze_medication_schedule(self, user_question: str) -> str:
         """
         사용자 질문을 요약·정리하고 캘린더 추가를 제안하는 응답 생성
@@ -87,10 +85,10 @@ class CalendarAI:
         ]
         return any(p in resp for p in positives)
 
-
     # ───────────────────────────────
     # 2단계 – 실제 캘린더에 추가
     # ───────────────────────────────
+
     def process_calendar_addition(self, *args) -> dict:
         """
         호출 형태 2가지를 모두 지원한다.
