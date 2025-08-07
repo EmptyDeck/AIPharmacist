@@ -54,9 +54,6 @@
 #     return {"text": response_text}
 
 
-
-
-
 # #backend/api/audio/gpt.py
 # import logging
 # import os
@@ -111,11 +108,12 @@
 #     return {"text": response_text}
 
 
-
-### + cal
+# + cal
 
 # backend/api/audio/gpt.py
-import logging, os, asyncio
+import logging
+import os
+import asyncio
 from typing import Dict
 
 from fastapi import APIRouter, HTTPException
@@ -123,7 +121,8 @@ from pydantic import BaseModel
 from core.config import settings
 
 # Google-Gemini SDK
-from google import genai
+# from google import genai
+import google.generativeai as genai
 
 # 캘린더용 AI & 에이전트
 from api.chatbot.calendarAI import calendar_ai       # 분석·추가 담당
@@ -150,7 +149,8 @@ def gemini_completion(prompt: str) -> str:
 # ───────────────────────────────────────
 #  사용자 세션 (캘린더 확인용)
 # ───────────────────────────────────────
-_user_sessions: Dict[str, Dict] = {}    # key = speaker_id (지금은 'voice_user' 고정)
+# key = speaker_id (지금은 'voice_user' 고정)
+_user_sessions: Dict[str, Dict] = {}
 
 
 class VoiceRequest(BaseModel):
@@ -171,7 +171,7 @@ async def voice_chat(req: VoiceRequest):
         if calendar_ai.check_confirmation(req.message):
             # 긍정 → 캘린더 실제 추가
             original = _user_sessions[user_id]["original_text"]
-            result   = await asyncio.get_event_loop().run_in_executor(
+            result = await asyncio.get_event_loop().run_in_executor(
                 None, calendar_ai.process_calendar_addition, original
             )
 
@@ -190,7 +190,7 @@ async def voice_chat(req: VoiceRequest):
     # ② 복약 일정 의도 감지 → ‘요약+질문’ 단계
     # ---------------------------------------------
     lowered = req.message.lower()
-    drug_keywords = ["캘린더", "일정", "알람","구글"]
+    drug_keywords = ["캘린더", "일정", "알람", "구글"]
 
     # drug 키워드가 하나라도 있고 아직 확인 세션이 없으면 → 일정 분석
     if any(k in lowered for k in drug_keywords) and user_id not in _user_sessions:
@@ -215,8 +215,6 @@ async def voice_chat(req: VoiceRequest):
             "original_text":   req.message
         }
         return {"text": voice_answer}   # 길이 제한
-
-
 
     # ③ 일반 대화 → Gemini 짧은 답
     prompt = (
