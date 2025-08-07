@@ -39,7 +39,7 @@
 from fastapi import APIRouter, UploadFile, File
 from pydantic import BaseModel
 import os
-
+from schemas.chat import ChatRequest, ChatResponse
 from google.cloud import speech
 
 router = APIRouter()
@@ -72,6 +72,9 @@ async def stt_recognize(file: UploadFile = File(...)):
         if not response.results:
             return {"text": ""}
         transcript = response.results[0].alternatives[0].transcript
+
+        #transcript = (f"{transcript} " f"사용자의 기저질환(참고용): {request.underlying_diseases} "f"현재 복용 중인 약물(참고용): {request.current_medications}")
+
         return {"text": transcript}
     except Exception as e:
         return {"error": str(e)}
