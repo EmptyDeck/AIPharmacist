@@ -1,4 +1,11 @@
-# 🏥 IBM DoctorAI - AI-Powered Medical Consultation Platform
+# 🏥 IBM DoctorAI - AI-Powered Pharmaceutical Consultation Platform
+
+## 🎥 프로젝트 데모 영상
+
+[![IBM DoctorAI Demo Video](https://img.youtube.com/vi/uNyeoSGKiCs/maxresdefault.jpg)](https://youtu.be/uNyeoSGKiCs)
+
+> 🔗 **[📺 YouTube에서 전체 데모 보기](https://youtu.be/uNyeoSGKiCs)**
+
 
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python">
