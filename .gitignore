@@ -8,3 +8,5 @@ backend/api/env.env
 *.pyc
 **/gen-lang-client.json
 Sejik/Demo/backend/utils/googleCalender/token.json
+/Sejik/Demo/backend/api/audio/temp
+/Sejik/Demo/backend/api/audio/temp

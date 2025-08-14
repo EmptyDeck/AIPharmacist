@@ -5,10 +5,10 @@ from core.config import settings
 
 class ExplainAI:
     def __init__(self):
-        self.api_key  = settings.WATSONX_API_KEY
+        self.api_key = settings.WATSONX_API_KEY
         self.endpoint = (
             "https://us-south.ml.cloud.ibm.com/ml/v4/deployments/"
-            "6261f83b-14d4-4666-9243-2cb36bdcd698/ai_service?version=2021-05-01"
+            "cd48d1c5-428f-47d9-a17d-710a60d340a7/ai_service?version=2021-05-01"
         )
         self.token = self._get_token()
 
@@ -41,7 +41,8 @@ class ExplainAI:
         }
 
         try:
-            resp = requests.post(self.endpoint, json=payload, headers=headers, timeout=60)
+            resp = requests.post(self.endpoint, json=payload,
+                                 headers=headers, timeout=60)
             resp.raise_for_status()
             data = resp.json()
             return (

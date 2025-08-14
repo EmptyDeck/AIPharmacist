@@ -54,14 +54,47 @@ def is_allowed_file(filename: str) -> bool:
         all_extensions.update(extensions)
     return ext in all_extensions
 
+# def analyze_with_watsonx_vision(file_path: Path, file_id: str):
+#     """watsonx vision을 사용하여 의료 문서 분석"""
+#     try:
+#         # 텍스트 추출 전용 프롬프트
+#         extraction_prompt = """이 이미지에서 모든 텍스트를 정확하게 추출해주세요.
 
-def is_vision_compatible(filename: str) -> bool:
-    """watsonx vision 처리 가능한 파일인지 확인"""
-    ext = Path(filename).suffix.lower()
-    return ext in {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'}
+# 특히 다음을 우선적으로 추출하세요:
+# - 약물명, 성분명, 용법, 용량
+# - 의료진 정보, 환자 정보
+# - 날짜, 시간, 주의사항
+# - 처방전 정보, 검사 결과
+# - 기타 모든 텍스트
 
-# 🔥 Vision 처리 함수 제거 - 업로드 시점에는 처리하지 않음!
-# def analyze_with_watsonx_vision(file_path: Path, file_id: str): <- 삭제
+# 추출된 텍스트만 반환하고, 추가 설명이나 해석은 하지 마세요."""
+
+#         # watsonx vision 호출 (file_path 직접 처리)
+#         result = process_image_with_watsonx_vision_direct(file_path, extraction_prompt)
+
+#         # 캐시에 저장 (file_id를 키로 사용)
+#         vision_result = {
+#             "success": True,
+#             "text": result,
+#             "processed_time": datetime.now().isoformat(),
+#             "method": "watsonx_vision"
+#         }
+
+#         set_vision_result(file_id, vision_result)
+#         return vision_result
+
+#     except Exception as e:
+#         error_result = {
+#             "success": False,
+#             "error": f"watsonx vision 처리 실패: {str(e)}",
+#             "text": "",
+#             "processed_time": datetime.now().isoformat(),
+#             "method": "watsonx_vision"
+#         }
+
+#         # 실패한 경우도 캐시에 저장 (재시도 방지)
+#         set_vision_result(file_id, error_result)
+#         return error_result
 
 
 @router.post("/upload", summary="단일 파일 업로드")
@@ -69,7 +102,7 @@ async def upload_file(
     file: UploadFile = File(..., description="업로드할 파일")
 ):
     """
-    단일 파일을 업로드합니다. Vision 처리는 채팅에서 사용할 때 실행됩니다.
+    단일 파일을 업로드하고 watsonx vision 처리를 수행합니다.
 
     - **file**: 업로드할 파일 (watsonx vision 처리 가능한 파일만)
 
@@ -108,8 +141,17 @@ async def upload_file(
         with open(file_path, "wb") as buffer:
             buffer.write(file_content)
 
-        # 🔥 Vision 처리하지 않음! 파일만 저장
-        print(f"[INFO] 파일 업로드 완료 (Vision 처리 지연): {file_id}")
+        # 🆕 watsonx vision 처리
+        try:
+            vision_result = analyze_with_watsonx_vision(file_path, file_id)
+        except Exception as vision_error:
+            vision_result = {
+                "success": False,
+                "error": f"watsonx vision 처리 실패: {str(vision_error)}",
+                "text": "",
+                "method": "watsonx_vision"
+            }
+            set_vision_result(file_id, vision_result)
 
         response_data = {
             "message": "파일 업로드 성공",
@@ -119,11 +161,12 @@ async def upload_file(
             "file_size": len(file_content),
             "file_category": category,
             "upload_time": datetime.now().isoformat(),
-            "file_url": f"/api/files/download/{file_id}",
-            # 🆕 Vision 처리 가능 여부만 표시
-            "vision_compatible": is_vision_compatible(file.filename),
-            "vision_status": "pending"  # 처리 대기 중
+            "file_url": f"/api/files/download/{file_id}"
         }
+
+        # 🆕 watsonx vision 결과가 있으면 추가
+        if vision_result:
+            response_data["vision_result"] = vision_result
 
         return response_data
 
@@ -136,7 +179,7 @@ async def upload_multiple_files(
     files: List[UploadFile] = File(..., description="업로드할 파일들")
 ):
     """
-    여러 개의 파일을 한 번에 업로드합니다. Vision 처리는 채팅에서 사용할 때 실행됩니다.
+    여러 개의 파일을 한 번에 업로드하고 watsonx vision 처리를 수행합니다.
 
     - **files**: 업로드할 파일들 (watsonx vision 처리 가능한 파일만, 최대 5개)
 
@@ -183,9 +226,16 @@ async def upload_multiple_files(
             with open(file_path, "wb") as buffer:
                 buffer.write(file_content)
 
-            # 🔥 Vision 처리하지 않음! 파일만 저장
-            print(
-                f"[INFO] 다중 파일 업로드 완료 (Vision 처리 지연)(fuile upload): {file_id}")
+            # 🆕 watsonx vision 처리
+            try:
+                vision_result = analyze_with_watsonx_vision(file_path, file_id)
+            except Exception as vision_error:
+                vision_result = {
+                    "success": False,
+                    "error": f"watsonx vision 처리 실패: {str(vision_error)}",
+                    "text": ""
+                }
+                set_vision_result(file_id, vision_result)
 
             upload_result = {
                 "file_id": file_id,
@@ -194,11 +244,11 @@ async def upload_multiple_files(
                 "file_size": len(file_content),
                 "file_category": category,
                 "upload_time": datetime.now().isoformat(),
-                "file_url": f"/api/files/download/{file_id}",
-                # 🆕 Vision 처리 가능 여부만 표시
-                "vision_compatible": is_vision_compatible(file.filename),
-                "vision_status": "pending"  # 처리 대기 중
+                "file_url": f"/api/files/download/{file_id}"
             }
+
+            if vision_result:
+                upload_result["vision_result"] = vision_result
 
             upload_results.append(upload_result)
 
@@ -264,15 +314,11 @@ async def get_file_info(file_id: str):
                         "created_time": datetime.fromtimestamp(stat.st_ctime).isoformat(),
                         "modified_time": datetime.fromtimestamp(stat.st_mtime).isoformat(),
                         "file_extension": file_path.suffix,
-                        "file_url": f"/api/files/download/{file_id}",
-                        "vision_compatible": is_vision_compatible(file_path.name),
+                        "file_url": f"/api/files/download/{file_id}"
                     }
 
                     if vision_result:
                         file_info["vision_result"] = vision_result
-                        file_info["vision_status"] = "processed"
-                    else:
-                        file_info["vision_status"] = "pending"
 
                     return file_info
 
@@ -330,8 +376,7 @@ async def list_files(category: Optional[str] = None):
                         "file_size": stat.st_size,
                         "file_category": category_dir.name,
                         "created_time": datetime.fromtimestamp(stat.st_ctime).isoformat(),
-                        "file_url": f"/api/files/download/{file_id}",
-                        "vision_compatible": is_vision_compatible(file_path.name)
+                        "file_url": f"/api/files/download/{file_id}"
                     }
 
                     # 캐시된 vision 결과도 함께 표시
@@ -339,9 +384,6 @@ async def list_files(category: Optional[str] = None):
                     if vision_result:
                         file_info["has_vision_result"] = vision_result.get(
                             "success", False)
-                        file_info["vision_status"] = "processed"
-                    else:
-                        file_info["vision_status"] = "pending"
 
                     files_list.append(file_info)
 
@@ -351,67 +393,13 @@ async def list_files(category: Optional[str] = None):
         "filter_category": category
     }
 
-# 🆕 Vision 처리 전용 함수 (업로드와 분리)
 
-
-def analyze_with_watsonx_vision(file_path: Path, file_id: str, custom_prompt: str = None):
-    """watsonx vision을 사용하여 의료 문서 분석 (채팅에서만 호출)"""
-    try:
-        # 기본 프롬프트 또는 사용자 맞춤 프롬프트 사용
-        if custom_prompt:
-            extraction_prompt = custom_prompt
-        else:
-            extraction_prompt = """이 이미지에서 모든 텍스트를 정확하게 추출해주세요.
-
-특히 다음을 우선적으로 추출하세요:
-- 약물명, 성분명, 용법, 용량
-- 의료진 정보, 환자 정보  
-- 날짜, 시간, 주의사항
-- 처방전 정보, 검사 결과
-- 기타 모든 텍스트
-
-추출된 텍스트만 반환하고, 추가 설명이나 해석은 하지 마세요."""
-
-        # watsonx vision 호출 (file_path 직접 처리)
-        result = process_image_with_watsonx_vision_direct(
-            file_path, extraction_prompt)
-
-        # 캐시에 저장 (file_id를 키로 사용)
-        vision_result = {
-            "success": True,
-            "text": result,
-            "processed_time": datetime.now().isoformat(),
-            "method": "watsonx_vision_from_chat",
-            "prompt_type": "custom" if custom_prompt else "default"
-        }
-
-        set_vision_result(file_id, vision_result)
-        return vision_result
-
-    except Exception as e:
-        error_result = {
-            "success": False,
-            "error": f"watsonx vision 처리 실패: {str(e)}",
-            "text": "",
-            "processed_time": datetime.now().isoformat(),
-            "method": "watsonx_vision_from_chat"
-        }
-
-        # 실패한 경우도 캐시에 저장 (재시도 방지)
-        set_vision_result(file_id, error_result)
-        return error_result
-
-
-@router.post("/vision/{file_id}", summary="수동 watsonx vision 처리")
-async def process_vision(
-    file_id: str,
-    custom_prompt: Optional[str] = Form(None, description="사용자 정의 프롬프트 (선택사항)")
-):
+@router.post("/vision/{file_id}", summary="업로드된 파일 watsonx vision 재시도")
+async def process_vision(file_id: str):
     """
-    업로드된 파일에 대해 watsonx vision 처리를 수동으로 실행합니다.
+    watsonx vision 처리 실패 파일에 대해 vision 처리를 재시도합니다.
 
     - **file_id**: vision 처리할 파일의 ID
-    - **custom_prompt**: 사용자 정의 프롬프트 (선택사항)
     """
 
     # 파일 찾기
@@ -429,7 +417,8 @@ async def process_vision(
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
 
     # 지원하는 파일 형식 확인
-    if not is_vision_compatible(file_path.name):
+    ext = file_path.suffix.lower()
+    if ext not in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif', '.webp']:
         raise HTTPException(
             status_code=400,
             detail="watsonx vision을 지원하지 않는 파일 형식입니다. (지원: jpg, jpeg, png, bmp, tiff, gif, webp)"
@@ -469,9 +458,8 @@ async def process_vision(
         # 기존 캐시 결과 제거
         clear_vision_cache(file_id)
 
-        # watsonx vision 처리 (사용자 정의 프롬프트 적용)
-        vision_result = analyze_with_watsonx_vision(
-            file_path, file_id, custom_prompt)
+        # watsonx vision 처리
+        vision_result = analyze_with_watsonx_vision(file_path, file_id)
 
         # 성공 시 재시도 기록 삭제
         if file_id in vision_retry_tracker:
@@ -482,7 +470,6 @@ async def process_vision(
             "file_name": file_path.name,
             "file_category": file_path.parent.name,
             "vision_result": vision_result,
-            "used_custom_prompt": bool(custom_prompt),
             "retry_info": {
                 "attempt_number": vision_retry_tracker.get(file_id, {}).get('count', 0),
                 "remaining_attempts": VISION_RETRY_LIMIT - vision_retry_tracker.get(file_id, {}).get('count', 0)
